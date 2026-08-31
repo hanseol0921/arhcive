@@ -1200,6 +1200,8 @@ async function getPhotoPost(photo) {
                     <img
                       src={photo.image_url}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       style={{
                         objectPosition: photo.crop_position || "50% 50%",
                       }}
