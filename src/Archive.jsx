@@ -1198,7 +1198,7 @@ async function getPhotoPost(photo) {
                 >
                   <div className="photo">
                     <img
-                      src={photo.image_url}
+                      src={photo.thumbnail_url || photo.image_url}
                       alt=""
                       loading="lazy"
                       decoding="async"
