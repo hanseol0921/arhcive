@@ -570,21 +570,193 @@ select {
 
 
 /* =========================
-   작은 휴대폰
+   모바일 메인 화면
 ========================= */
 
-@media (max-width: 480px) {
+@media (max-width: 800px) {
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-height: 100%;
+    height: auto;
+  }
+
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .page {
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+
+    padding: 15px 12px;
+
+    overflow: visible;
+  }
+
+  .archive {
+    width: 100%;
+    height: auto;
+  }
+
+  /* 상단 */
 
   .top {
+    height: auto;
+
+    padding: 0;
+    margin-bottom: 12px;
+
     flex-direction: column;
     align-items: stretch;
 
     gap: 10px;
   }
 
+  .logo {
+    padding-right: 55px;
+  }
+
   .search-box {
     width: 100%;
+    height: 32px;
+
+    margin-bottom: 0;
   }
+
+  /* 프로필 제거 */
+
+  .profile {
+    display: none;
+  }
+
+  /* 공책 스프링 제거 */
+
+  .notebook-rings {
+    display: none;
+  }
+
+  /* 메인 프레임 */
+
+  .blue-frame {
+    width: 100%;
+
+    height: auto;
+    min-height: calc(100vh - 100px);
+
+    display: block;
+
+    padding: 8px;
+  }
+
+  /* 내용 영역을 모바일 전체 폭으로 */
+
+  .content {
+    width: 100%;
+    min-width: 0;
+
+    height: auto;
+    min-height: calc(100vh - 120px);
+
+    padding: 18px 12px;
+
+    overflow: visible;
+  }
+
+  /* 제목 */
+
+  .archive-title {
+    align-items: flex-end;
+  }
+
+  .archive-title h1 {
+    font-size: 20px;
+  }
+
+  /* 필터 */
+
+  .filter-bar {
+    flex-wrap: wrap;
+
+    gap: 5px;
+
+    padding-top: 8px;
+  }
+
+  .filter-bar button,
+  .filter-bar select {
+    width: auto;
+    min-width: 72px;
+  }
+
+  .date-filter {
+    width: 100%;
+
+    margin-left: 0;
+
+    flex-wrap: wrap;
+  }
+
+  .date-filter input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* 사진 */
+
+  .photo-grid {
+    width: 100%;
+
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    gap: 3px;
+
+    overflow: visible;
+  }
+
+  /* 오른쪽 탭 → 모바일에서는 프레임 안쪽 상단 */
+
+  .archive-side-tabs {
+    position: static;
+
+    width: 100%;
+
+    margin-bottom: 8px;
+
+    flex-direction: row;
+
+    gap: 5px;
+  }
+
+  .archive-side-tab {
+    width: auto;
+    height: 32px;
+
+    flex: 1;
+
+    border-radius: 7px;
+
+    font-size: 10px;
+  }
+
+  /* 관리자 버튼 */
+
+  .admin-button {
+    top: 15px;
+    right: 14px;
+  }
+}
+
+
+/* =========================
+   작은 휴대폰
+========================= */
+
+@media (max-width: 480px) {
 
   .photo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
