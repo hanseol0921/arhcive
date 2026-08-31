@@ -1,0 +1,833 @@
+.tag-manager-page {
+  min-height: 100vh;
+
+  padding: 45px 30px;
+
+  background: #eeeae0;
+
+  color: #55514a;
+
+  font-family: "Nanum Gothic", sans-serif;
+}
+
+.tag-manager-box {
+  width: min(700px, 100%);
+
+  margin: 0 auto;
+
+  padding: 35px;
+
+  background: #fff;
+
+  border-radius: 12px;
+
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+
+/* =========================
+   헤더
+========================= */
+
+.tag-manager-header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-bottom: 30px;
+
+  padding-bottom: 15px;
+
+  border-bottom: 1px solid #ddd8d0;
+}
+
+.tag-manager-small {
+  display: block;
+
+  margin-bottom: 5px;
+
+  font-size: 8px;
+
+  letter-spacing: 3px;
+
+  color: #aaa398;
+}
+
+.tag-manager-header h1 {
+  margin: 0;
+
+  font-size: 24px;
+
+  font-weight: normal;
+}
+
+.tag-manager-home {
+  height: 28px;
+
+  padding: 0 12px;
+
+  border: 1px solid #111;
+
+  background: #fff;
+
+  color: #55514a;
+
+  font-family: inherit;
+
+  font-size: 9px;
+
+  cursor: pointer;
+}
+
+.tag-manager-home:hover {
+  background: #111;
+
+  color: #fff;
+}
+
+
+/* =========================
+   섹션
+========================= */
+
+.tag-section-title {
+  margin-bottom: 12px;
+
+  font-size: 13px;
+
+  color: #55514a;
+}
+
+
+/* =========================
+   검색어 추가
+========================= */
+
+.tag-add-section {
+  margin-bottom: 40px;
+
+  padding-bottom: 25px;
+
+  border-bottom: 1px solid #ddd;
+}
+
+.tag-add-form {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+}
+
+.tag-add-form input {
+  flex: 1;
+
+  height: 36px;
+
+  padding: 0 10px;
+
+  border: 1px solid #bbb6ae;
+
+  border-radius: 4px;
+
+  background: #fafafa;
+
+  color: #55514a;
+
+  font-family: inherit;
+
+  font-size: 11px;
+
+  outline: none;
+}
+
+.tag-add-form input:focus {
+  border-color: #63b8dc;
+
+  background: #fff;
+}
+
+.tag-add-form span {
+  color: #aaa398;
+
+  font-size: 13px;
+}
+
+.tag-add-form button {
+  height: 36px;
+
+  padding: 0 15px;
+
+  border: 0;
+
+  border-radius: 4px;
+
+  background: #63b8dc;
+
+  color: #fff;
+
+  font-family: inherit;
+
+  font-size: 10px;
+
+  cursor: pointer;
+}
+
+.tag-add-form button:hover {
+  background: #4da8cf;
+}
+
+.tag-add-form button:disabled {
+  opacity: 0.5;
+
+  cursor: default;
+}
+
+.tag-input-help {
+  margin-top: 7px;
+
+  font-size: 8px;
+
+  color: #aaa398;
+}
+
+
+/* =========================
+   목록
+========================= */
+
+.tag-list {
+  display: flex;
+
+  flex-direction: column;
+}
+
+.tag-row {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 10px;
+
+  padding: 14px 0;
+
+  border-bottom: 1px solid #eee;
+}
+
+.real-tag {
+  width: 150px;
+
+  flex-shrink: 0;
+
+  padding-top: 5px;
+
+  font-size: 11px;
+
+  color: #55514a;
+}
+
+.tag-arrow {
+  padding-top: 4px;
+
+  color: #aaa398;
+
+  font-size: 11px;
+}
+
+.alias-list {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 6px;
+
+  flex: 1;
+}
+
+.alias-item {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  padding: 5px 8px;
+
+  border: 1px solid #d5d0c8;
+
+  border-radius: 3px;
+
+  background: #fafafa;
+
+  font-size: 9px;
+
+  color: #666158;
+}
+
+.alias-item button {
+  width: 14px;
+  height: 14px;
+
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #aaa;
+
+  font-size: 12px;
+
+  line-height: 12px;
+
+  cursor: pointer;
+}
+
+.alias-item button:hover {
+  color: #b66;
+}
+
+.tag-empty {
+  padding: 30px 0;
+
+  text-align: center;
+
+  font-size: 10px;
+
+  color: #aaa398;
+}
+
+/* 검색어 영역 */
+
+.alias-area {
+  flex: 1;
+  min-width: 0;
+}
+
+.alias-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+
+/* 기존 태그에 검색어 추가 */
+
+.add-alias-button {
+  margin-top: 7px;
+
+  border: 1px dashed #aaa398;
+  background: transparent;
+
+  padding: 4px 8px;
+
+  color: #8e887e;
+
+  font-family: inherit;
+  font-size: 8px;
+
+  cursor: pointer;
+}
+
+.add-alias-button:hover {
+  background: #f5f5f5;
+}
+
+
+/* 검색어 입력 */
+
+.inline-alias-add {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+
+  margin-top: 7px;
+}
+
+.inline-alias-add input {
+  width: 120px;
+  height: 25px;
+
+  padding: 0 7px;
+
+  border: 1px solid #bbb6ae;
+  border-radius: 3px;
+
+  background: #fff;
+
+  color: #55514a;
+
+  font-family: inherit;
+  font-size: 9px;
+
+  outline: none;
+}
+
+.inline-alias-add input:focus {
+  border-color: #63b8dc;
+}
+
+.inline-alias-add button {
+  height: 25px;
+
+  padding: 0 8px;
+
+  border: 1px solid #aaa398;
+  background: #fff;
+
+  color: #55514a;
+
+  font-family: inherit;
+  font-size: 8px;
+
+  cursor: pointer;
+}
+
+.inline-alias-add button:hover {
+  background: #f5f5f5;
+}
+
+.inline-alias-add .alias-cancel {
+  border: 0;
+  color: #999;
+}
+
+/* =========================
+   태그 검색
+========================= */
+
+.tag-search-box {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+  height: 34px;
+
+  margin-bottom: 18px;
+
+  padding: 0 9px;
+
+  border: 1px solid #bbb6ae;
+  border-radius: 4px;
+
+  background: #fafafa;
+}
+
+.tag-search-box span {
+  margin-right: 7px;
+
+  color: #999;
+
+  font-size: 14px;
+}
+
+.tag-search-box input {
+  flex: 1;
+
+  width: 100%;
+  height: 100%;
+
+  border: 0;
+  outline: none;
+
+  background: transparent;
+
+  color: #55514a;
+
+  font-family: inherit;
+  font-size: 10px;
+}
+
+.tag-search-box button {
+  width: 20px;
+  height: 20px;
+
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  color: #999;
+
+  font-size: 15px;
+  cursor: pointer;
+}
+
+
+/* =========================
+   검색어 영역
+========================= */
+
+.alias-area {
+  flex: 1;
+  min-width: 0;
+}
+
+.alias-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+
+  gap: 6px;
+}
+
+
+/* =========================
+   기존 태그에 검색어 추가
+========================= */
+
+.add-alias-button {
+  margin-top: 7px;
+
+  padding: 4px 8px;
+
+  border: 1px dashed #aaa398;
+  background: transparent;
+
+  color: #8e887e;
+
+  font-family: inherit;
+  font-size: 8px;
+
+  cursor: pointer;
+}
+
+.add-alias-button:hover {
+  background: #f5f5f5;
+}
+
+
+/* =========================
+   검색어 입력
+========================= */
+
+.inline-alias-add {
+  display: flex;
+  align-items: center;
+
+  gap: 5px;
+
+  margin-top: 7px;
+}
+
+.inline-alias-add input {
+  width: 120px;
+  height: 25px;
+
+  padding: 0 7px;
+
+  border: 1px solid #bbb6ae;
+  border-radius: 3px;
+
+  background: #fff;
+
+  color: #55514a;
+
+  font-family: inherit;
+  font-size: 9px;
+
+  outline: none;
+}
+
+.inline-alias-add input:focus {
+  border-color: #63b8dc;
+}
+
+.inline-alias-add button {
+  height: 25px;
+
+  padding: 0 8px;
+
+  border: 1px solid #aaa398;
+  background: #fff;
+
+  color: #55514a;
+
+  font-family: inherit;
+  font-size: 8px;
+
+  cursor: pointer;
+}
+
+.inline-alias-add button:hover {
+  background: #f5f5f5;
+}
+
+.inline-alias-add .alias-cancel {
+  border: 0;
+  color: #999;
+}
+
+.tag-input-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.tag-error {
+  margin-top: 5px;
+  font-size: 12px;
+  color: red;
+}
+
+.tag-delete-button {
+  margin-left: auto;
+
+  border: none;
+  background: none;
+
+  color: #999;
+  font-size: 11px;
+
+  cursor: pointer;
+}
+
+.tag-delete-button:hover {
+  color: red;
+}
+
+/* 태그 목록 헤더 */
+
+.tag-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.tag-search-input {
+  width: 220px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.tag-search-input:focus {
+  outline: none;
+  border-color: #333;
+}
+
+
+/* 중복 태그 경고 */
+
+.tag-error {
+  margin-top: 8px;
+  color: #e53935;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+
+/* 태그 전체 삭제 */
+
+.delete-tag-button {
+  margin-left: auto;
+  flex-shrink: 0;
+
+  border: 1px solid #ddd;
+  background: white;
+  color: #999;
+
+  padding: 5px 9px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.delete-tag-button:hover {
+  color: #e53935;
+  border-color: #e53935;
+}
+
+
+/* 검색어 추가 버튼 비활성화 */
+
+.tag-add-form button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tag-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.tag-search-input {
+  width: 220px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.tag-search-input:focus {
+  outline: none;
+  border-color: #333;
+}
+
+.tag-error {
+  margin-top: 8px;
+  color: #e53935;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.delete-tag-button {
+  margin-left: auto;
+  flex-shrink: 0;
+
+  border: 1px solid #ddd;
+  background: white;
+  color: #999;
+
+  padding: 5px 9px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.delete-tag-button:hover {
+  color: #e53935;
+  border-color: #e53935;
+}
+
+.tag-add-form select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background: white;
+  font-size: 13px;
+}
+
+.tag-add-form button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =========================
+   등록된 태그 검색
+========================= */
+
+.tag-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.tag-search-input {
+  width: 220px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.tag-search-input:focus {
+  outline: none;
+  border-color: #333;
+}
+
+
+/* =========================
+   오류
+========================= */
+
+.tag-error {
+  margin-top: 8px;
+  color: #e53935;
+  font-size: 12px;
+}
+
+
+/* =========================
+   목록 안 검색어 추가
+========================= */
+
+.add-alias-button {
+  border: 1px dashed #aaa;
+  background: white;
+  color: #666;
+  padding: 5px 9px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.add-alias-button:hover {
+  border-color: #333;
+  color: #333;
+}
+
+
+.alias-add-inline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.alias-add-inline input {
+  width: 120px;
+  padding: 5px 7px;
+  border: 1px solid #ccc;
+  font-size: 11px;
+  box-sizing: border-box;
+}
+
+.alias-add-inline input:focus {
+  outline: none;
+  border-color: #333;
+}
+
+.alias-add-inline button {
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  background: white;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.alias-add-inline button:hover {
+  border-color: #333;
+}
+
+.alias-add-inline button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+
+/* =========================
+   태그 삭제
+========================= */
+
+.delete-tag-button {
+  margin-left: auto;
+  flex-shrink: 0;
+
+  padding: 5px 9px;
+
+  border: 1px solid #ddd;
+  background: white;
+
+  color: #999;
+  font-size: 11px;
+
+  cursor: pointer;
+}
+
+.delete-tag-button:hover {
+  color: #e53935;
+  border-color: #e53935;
+}
