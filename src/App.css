@@ -642,30 +642,30 @@ select {
 
   /* 메인 프레임 */
 
-  .blue-frame {
-    width: 100%;
-
-    height: auto;
-    min-height: calc(100vh - 100px);
-
-    display: block;
-
-    padding: 8px;
-  }
+    .blue-frame {
+      width: 100%;
+  
+      height: auto !important;
+      min-height: 0 !important;
+  
+      display: block;
+  
+      padding: 8px;
+    }
 
   /* 내용 영역을 모바일 전체 폭으로 */
 
-  .content {
-    width: 100%;
-    min-width: 0;
+ .content {
+   width: 100%;
+   min-width: 0;
 
-    height: auto;
-    min-height: calc(100vh - 120px);
+   height: auto !important;
+   min-height: 0 !important;
 
-    padding: 18px 12px;
+   padding: 18px 12px;
 
-    overflow: visible;
-  }
+   overflow: visible;
+ }
 
   /* 제목 */
 
@@ -759,7 +759,7 @@ select {
 @media (max-width: 480px) {
 
   .photo-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -1006,6 +1006,15 @@ select {
   .weverse-link {
     margin-top: 20px;
   }
+
+  .archive-title {
+    margin: 0;
+     padding-bottom: 10px;
+   }
+  
+  .blue-frame {
+    min-height: 0;
+   }
 }
 
 /* =========================
