@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
+import ArchiveLayout from "./ArchiveLayout";
+import ArchiveFilters from "./ArchiveFilters";
 import "./App.css";
 
 function Videos({ isAdmin = false }) {
@@ -9,7 +11,14 @@ function Videos({ isAdmin = false }) {
   const [selectedVideo, setSelectedVideo] = useState(null);
 
   const [sortOrder, setSortOrder] = useState("최신순");
+
   const [videoType, setVideoType] = useState("전체");
+
+  const [search, setSearch] = useState("");
+
+  const [startDate, setStartDate] = useState("");
+
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     loadVideos();
@@ -94,20 +103,30 @@ function Videos({ isAdmin = false }) {
   const filteredVideos = useMemo(() => {
     return [...videos]
       .filter((video) => {
-        return (
-          videoType === "전체" ||
-          video.type === videoType
-        );
+        const post = getPost(video);
+
+        const videoDate = post?.date || "";
+
+        // 유형
+        const matchesType = videoType === "전체" || video.type === videoType;
+
+        // 시작 날짜
+        const matchesStartDate =
+          !startDate || (videoDate && videoDate >= startDate);
+
+        // 종료 날짜
+        const matchesEndDate = !endDate || (videoDate && videoDate <= endDate);
+
+        return matchesType && matchesStartDate && matchesEndDate;
       })
       .sort((a, b) => {
         const aTime = getVideoSortTime(a);
+
         const bTime = getVideoSortTime(b);
 
-        return sortOrder === "최신순"
-          ? bTime - aTime
-          : aTime - bTime;
+        return sortOrder === "최신순" ? bTime - aTime : aTime - bTime;
       });
-  }, [videos, posts, sortOrder, videoType]);
+  }, [videos, posts, sortOrder, videoType, startDate, endDate]);
 
   async function downloadVideo(video) {
     try {
@@ -139,307 +158,176 @@ function Videos({ isAdmin = false }) {
     }
   }
 
-  return (
-    <div className="page">
-      <div className="archive">
-        <header className="top">
-          <div className="logo">
-            RIWOO
-            <span>VIDEO ARCHIVE</span>
-          </div>
 
-          {!isAdmin && (
-            <button
-              className="admin-button"
-              onClick={() => {
-                window.location.href = "/login";
-              }}
-            >
-              관리자
-            </button>
-          )}
 
-          {isAdmin && (
-            <div className="admin-header-buttons">
-              <button
-                type="button"
-                className="back-button"
-                onClick={() => {
-                  window.location.href = "/";
-                }}
+          return (
+            <>
+              <ArchiveLayout
+                isAdmin={isAdmin}
+                activeTab="videos"
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="동영상이나 키워드를 검색해보세요"
               >
-                HOME
-              </button>
+                <ArchiveFilters
+                  type={videoType}
+                  setType={setVideoType}
+                  sortOrder={sortOrder}
+                  setSortOrder={setSortOrder}
+                  startDate={startDate}
+                  setStartDate={setStartDate}
+                  endDate={endDate}
+                  setEndDate={setEndDate}
+                  typeLabel="동영상 유형"
+                  allActive={videoType === "전체" && search.trim() === ""}
+                  onAllClick={() => {
+                    setVideoType("전체");
+                    setSearch("");
+                  }}
+                />
 
-              <button
-                type="button"
-                className="add-photo-button"
-                onClick={() => {
-                  window.location.href = "/admin/import";
-                }}
-              >
-                + 백업 폴더 가져오기
-              </button>
+                <div className="video-grid">
+                  {loading && (
+                    <div className="video-empty">동영상을 불러오는 중...</div>
+                  )}
 
-              <button
-                type="button"
-                className="logout-button"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  window.location.href = "/";
-                }}
-              >
-                로그아웃
-              </button>
-            </div>
-          )}
-        </header>
+                  {!loading && filteredVideos.length === 0 && (
+                    <div className="video-empty">
+                      조건에 맞는 동영상이 없습니다.
+                    </div>
+                  )}
 
-        <div className="blue-frame">
-          <aside className="profile">
-            <div className="profile-image">PROFILE</div>
-            <div className="profile-name">링링의 한 마디</div>
-            <div className="profile-text">하이류~~~</div>
-            <div className="profile-line" />
+                  {!loading &&
+                    filteredVideos.map((video) => {
+                      const post = getPost(video);
 
-            <div className="profile-info">
-              <span>TOTAL VIDEO</span>
-              <strong>{videos.length}</strong>
-            </div>
+                      return (
+                        <article
+                          className="video-card"
+                          key={video.id}
+                          onClick={() => setSelectedVideo(video)}
+                        >
+                          <div className="video-preview">
+                            <video
+                              src={video.video_url}
+                              
+                              preload="metadata"
+                              muted
+                              playsInline
+                            />
+                            <div className="video-thumbnail-play">▶</div>
+                          </div>
 
-            <div className="music">♪ 오늘만 I LOVE YOU</div>
-          </aside>
+                          <div className="video-info">
+                            {post && (
+                              <div className="video-date">
+                                <span>{formatDate(post.date)}</span>
 
-          <div className="notebook-rings">
-            <div className="ring-group top-rings">
-              <div className="notebook-ring" />
-              <div className="notebook-ring" />
-            </div>
-
-            <div className="ring-group bottom-rings">
-              <div className="notebook-ring" />
-              <div className="notebook-ring" />
-            </div>
-          </div>
-
-          <main className="content video-content">
-            <div className="video-archive-header">
-              <div>
-                <div className="video-archive-small">WEVERSE</div>
-                <div className="video-archive-title">VIDEOS</div>
-              </div>
-
-              <div className="video-total">
-                TOTAL {filteredVideos.length}
-              </div>
-            </div>
-
-            <div className="video-filter-bar">
-              <button
-                type="button"
-                className={videoType === "전체" ? "active" : ""}
-                onClick={() => setVideoType("전체")}
-              >
-                전체
-              </button>
-
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-              >
-                <option value="최신순">최신순</option>
-                <option value="오래된순">오래된순</option>
-              </select>
-
-              <select
-                value={videoType}
-                onChange={(e) => setVideoType(e.target.value)}
-              >
-                <option value="전체">동영상 유형</option>
-                <option value="셀카">셀카</option>
-                <option value="남찍사">남찍사</option>
-                <option value="거울셀카">거울셀카</option>
-                <option value="그외">그외</option>
-              </select>
-            </div>
-
-            <div className="video-grid">
-              {loading && (
-                <div className="video-empty">
-                  동영상을 불러오는 중...
-                </div>
-              )}
-
-              {!loading && filteredVideos.length === 0 && (
-                <div className="video-empty">
-                  조건에 맞는 동영상이 없습니다.
-                </div>
-              )}
-
-              {!loading &&
-                filteredVideos.map((video) => {
-                  const post = getPost(video);
-
-                  return (
-                    <article
-                      className="video-card"
-                      key={video.id}
-                      onClick={() => setSelectedVideo(video)}
-                    >
-                      <div className="video-preview">
-                        <video
-                          src={video.video_url}
-                          poster={video.thumbnail_url || undefined}
-                          preload="metadata"
-                          muted
-                          playsInline
-                        />
-                        <div className="video-thumbnail-play">▶</div>
-                      </div>
-
-                      <div className="video-info">
-                        {post && (
-                          <div className="video-date">
-                            <span>{formatDate(post.date)}</span>
-
-                            {post.posted_at && (
-                              <span className="video-time">
-                                {formatTime(post.posted_at)}
-                              </span>
+                                {post.posted_at && (
+                                  <span className="video-time">
+                                    {formatTime(post.posted_at)}
+                                  </span>
+                                )}
+                              </div>
                             )}
-                          </div>
-                        )}
 
-                        {video.type && (
-                          <div className="video-type">
-                            {video.type}
-                          </div>
-                        )}
+                            {video.type && (
+                              <div className="video-type">{video.type}</div>
+                            )}
 
-                        {post?.content && (
-                          <div className="video-post-text">
-                            {post.content}
-                          </div>
-                        )}
+                            {post?.content && (
+                              <div className="video-post-text">
+                                {post.content}
+                              </div>
+                            )}
 
-                        <div className="video-card-footer">
-                          {post?.weverse_url && (
-                            <a
-                              href={post.weverse_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              WEVERSE ↗
-                            </a>
+                            <div className="video-card-footer">
+                              {post?.weverse_url && (
+                                <a
+                                  href={post.weverse_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  WEVERSE ↗
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                </div>
+              </ArchiveLayout>
+
+              {selectedVideo && (
+                <div
+                  className="video-modal"
+                  onClick={() => setSelectedVideo(null)}
+                >
+                  <div
+                    className="video-modal-content"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className="modal-close"
+                      onClick={() => setSelectedVideo(null)}
+                    >
+                      ×
+                    </button>
+
+                    <div className="video-modal-player">
+                      <video
+                        src={selectedVideo.video_url}
+                        poster={selectedVideo.thumbnail_url || undefined}
+                        controls
+                        controlsList="nodownload"
+                        preload="metadata"
+                        playsInline
+                      />
+                    </div>
+
+                    <div className="video-modal-info">
+                      {getPost(selectedVideo) && (
+                        <div className="video-date">
+                          <span>{formatDate(getPost(selectedVideo).date)}</span>
+                          {getPost(selectedVideo).posted_at && (
+                            <span className="video-time">
+                              {formatTime(getPost(selectedVideo).posted_at)}
+                            </span>
                           )}
                         </div>
-                      </div>
-                    </article>
-                  );
-                })}
-            </div>
-          </main>
+                      )}
 
-          <div className="archive-side-tabs">
-            <button
-              type="button"
-              className="archive-side-tab"
-              onClick={() => {
-                window.location.href = isAdmin ? "/admin" : "/";
-              }}
-            >
-              사진
-            </button>
+                      {selectedVideo.type && (
+                        <div className="video-type">{selectedVideo.type}</div>
+                      )}
 
-            <button
-              type="button"
-              className="archive-side-tab active"
-              onClick={() => {
-                window.location.href =
-                  isAdmin ? "/admin/videos" : "/videos";
-              }}
-            >
-              동영상
-            </button>
+                      <button
+                        type="button"
+                        className="media-download-button video-modal-download"
+                        onClick={() => downloadVideo(selectedVideo)}
+                      >
+                        동영상 다운로드 ↓
+                      </button>
 
-            {isAdmin && (
-              <button
-                type="button"
-                className="archive-side-tab"
-                onClick={() => {
-                  window.location.href = "/admin/posts";
-                }}
-              >
-                게시글
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {selectedVideo && (
-        <div className="video-modal" onClick={() => setSelectedVideo(null)}>
-          <div className="video-modal-content" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className="modal-close"
-              onClick={() => setSelectedVideo(null)}
-            >
-              ×
-            </button>
-
-            <div className="video-modal-player">
-              <video
-                src={selectedVideo.video_url}
-                poster={selectedVideo.thumbnail_url || undefined}
-                controls
-                controlsList="nodownload"
-                preload="metadata"
-                playsInline
-              />
-            </div>
-
-            <div className="video-modal-info">
-              {getPost(selectedVideo) && (
-                <div className="video-date">
-                  <span>{formatDate(getPost(selectedVideo).date)}</span>
-                  {getPost(selectedVideo).posted_at && (
-                    <span className="video-time">
-                      {formatTime(getPost(selectedVideo).posted_at)}
-                    </span>
-                  )}
+                      {getPost(selectedVideo)?.weverse_url && (
+                        <a
+                          className="weverse-link"
+                          href={getPost(selectedVideo).weverse_url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          위버스에서 보기 ↗
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
-
-              {selectedVideo.type && (
-                <div className="video-type">{selectedVideo.type}</div>
-              )}
-
-              <button
-                type="button"
-                className="media-download-button video-modal-download"
-                onClick={() => downloadVideo(selectedVideo)}
-              >
-                동영상 다운로드 ↓
-              </button>
-
-              {getPost(selectedVideo)?.weverse_url && (
-                <a
-                  className="weverse-link"
-                  href={getPost(selectedVideo).weverse_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  위버스에서 보기 ↗
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+            </>
+          );
 }
 
 export default Videos;

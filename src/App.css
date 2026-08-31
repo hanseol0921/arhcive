@@ -11,7 +11,13 @@ body,
 
 body {
   margin: 0;
-  background: #eeeae0;
+  background-color: #ffffff;
+  
+    background-image:
+      linear-gradient(rgba(85, 81, 74, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(85, 81, 74, 0.06) 1px, transparent 1px);
+  
+    background-size: 20px 20px;
   color: #55514a;
   font-family: "Nanum Gothic", sans-serif;
 
@@ -67,20 +73,7 @@ select {
   flex-shrink: 0;
 }
 
-.logo {
-  font-size: 13px;
-  letter-spacing: 2px;
-  color: #777268;
-}
 
-.logo span {
-  display: block;
-
-  font-size: 8px;
-  letter-spacing: 3px;
-
-  margin-top: 4px;
-}
 
 .search-box {
   width: 270px;
@@ -89,6 +82,7 @@ select {
   display: flex;
   align-items: center;
 
+  margin-left: auto;
   margin-bottom: -50px;
 
   background: #ffffff;
@@ -144,12 +138,13 @@ select {
   padding: 20px;
 
   background: #ffffff;
+  border: 1px solid #D9D9D9;
 
   border-radius: 13px;
 
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.35),
-    0 2px 0 rgba(70, 100, 110, 0.15);
+    0 4px 8px rgba(70, 100, 110, 0.15);
 }
 
 
@@ -163,7 +158,7 @@ select {
   position: absolute;
   inset: 8px;
 
-  border: 1px dashed rgba(37, 37, 37, 0.75);
+  border: 1px dashed rgba(255, 255, 255, 0.75);
   border-radius: 9px;
 
   pointer-events: none;
@@ -202,6 +197,8 @@ select {
 }
 
 .profile-image {
+  position: relative;
+  overflow: hidden;
   width: 100%;
   aspect-ratio: 1 / 1;
 
@@ -215,6 +212,48 @@ select {
   letter-spacing: 1px;
 
   color: #9c978d;
+}
+
+.profile-image img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+}
+
+.profile-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+}
+
+.profile-image-edit {
+  position: absolute;
+
+  left: 50%;
+  bottom: 8px;
+
+  transform: translateX(-50%);
+
+  padding: 5px 10px;
+
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+
+  font-size: 9px;
+  white-space: nowrap;
+
+  cursor: pointer;
+}
+
+.profile-image-edit:hover {
+  background: #ffffff;
 }
 
 .profile-name {
@@ -593,6 +632,7 @@ select {
   background: rgba(30, 30, 30, 0.55);
 
   backdrop-filter: blur(2px);
+  
 }
 
 
@@ -602,14 +642,12 @@ select {
   position: relative;
 
   width: min(850px, 90vw);
-  max-height: 90vh;
+  height: min(680px, 85vh);
 
   display: flex;
 
   background: #ffffff;
-
   border-radius: 10px;
-
   overflow: hidden;
 
   box-shadow:
@@ -620,26 +658,49 @@ select {
 /* 큰 사진 */
 
 .modal-image {
-  width: 60%;
+  position: relative;
 
-  min-height: 500px;
+  width: 60%;
+  height: 100%;
+
+  flex-shrink: 0;
 
   display: flex;
   align-items: center;
   justify-content: center;
 
+  overflow: hidden;
   background: #eeeae0;
 }
 
-.modal-image img {
+/* 뒤에 깔리는 같은 사진 */
+.modal-image-background {
+  position: absolute;
+
+  inset: -30px;
+
+  width: calc(100% + 60px);
+  height: calc(100% + 60px);
+
+  object-fit: cover;
+
+  filter: blur(2px) brightness(0.3);
+  transform: scale(1.08);
+
+  opacity: 0.7;
+}
+
+/* 실제 원본 사진 */
+.modal-image-main {
+  position: relative;
+  z-index: 1;
+
   width: 100%;
   height: 100%;
 
-  max-height: 90vh;
+  object-fit: contain;
 
   display: block;
-
-  object-fit: contain;
 }
 
 
@@ -1708,16 +1769,11 @@ select {
 
 .post-media-video {
   width: 100%;
-
-  aspect-ratio: 1 / 1;
-
+  /* 사진 탭과 동일한 세로 비율 */
   display: block;
-
   object-fit: cover;
-
   background: #111111;
 }
-
 
 /* =========================
    게시글 하단 미디어 개수
@@ -1788,21 +1844,15 @@ select {
   min-height: 0;
 
   display: grid;
-
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 
   align-content: start;
+  gap: 2px;
 
-  gap: 8px;
-
-  padding: 12px 5px 30px;
+  padding: 0;
 
   overflow-y: auto;
   overflow-x: hidden;
-
-  scrollbar-width: thin;
-  scrollbar-color: #bdbdbd transparent;
 }
 
 .video-grid::-webkit-scrollbar {
@@ -1829,10 +1879,11 @@ select {
 
   background: #ffffff;
 
-  border: 1px solid #ded9d0;
-  border-radius: 6px;
+  border: 0;
+  border-radius: 0;
 
   overflow: hidden;
+  cursor: pointer;
 }
 
 
@@ -1841,31 +1892,28 @@ select {
 ========================= */
 
 .video-preview {
+  position: relative;
   width: 100%;
-
-  aspect-ratio: 9 / 16;
-
-  background: #111111;
-
+  aspect-ratio: 0.7;
   overflow: hidden;
+  background: #111111;
 }
 
 .video-preview video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-
   display: block;
-
   object-fit: cover;
 }
-
 
 /* =========================
    영상 정보
 ========================= */
 
 .video-info {
-  padding: 10px;
+  display: none;
 }
 
 .video-date {
@@ -1966,15 +2014,13 @@ select {
 
 @media (max-width: 900px) {
   .video-grid {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 600px) {
   .video-grid {
-    grid-template-columns:
-      1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -3368,3 +3414,4 @@ body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+

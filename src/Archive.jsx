@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
+import ArchiveLayout from "./ArchiveLayout";
+import ArchiveFilters from "./ArchiveFilters";
 import "./App.css";
 
 function Archive({ isAdmin = false }) {
@@ -8,6 +10,7 @@ function Archive({ isAdmin = false }) {
   const [photos, setPhotos] = useState([]);
 
   const [sortOrder, setSortOrder] = useState("최신순");
+  const [videoType, setVideoType] = useState("전체");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -966,253 +969,62 @@ async function getPhotoPost(photo) {
   // =========================
 
   return (
-    <div className="page">
-      <div className="archive">
-        {/* =========================
-            상단
-        ========================= */}
+    <>
+      <ArchiveLayout
+        isAdmin={isAdmin}
+        activeTab="photos"
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="사진이나 키워드를 검색해보세요"
+      >
+        {/* 필터 */}
 
-        <header className="top">
-          <div className="logo">
-            RIWOO
-            <span>PHOTO ARCHIVE</span>
-          </div>
-
-          <div className="search-box">
-            <span>⌕</span>
-
-            <input
-              type="text"
-              placeholder="사진이나 키워드를 검색해보세요"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          {/* 일반 사용자 */}
-
-          {!isAdmin && (
-            <button
-              className="admin-button"
-              onClick={() => {
-                window.location.href = "/login";
-              }}
-            >
-              관리자
-            </button>
-          )}
-
-          {/* 관리자 */}
-
-          {isAdmin && (
-            <div className="admin-header-buttons">
-              <button
-                type="button"
-                className="back-button"
-                onClick={() => {
-                  window.location.href = "/";
-                }}
-              >
-                HOME
-              </button>
-
-              <button
-                type="button"
-                className="add-photo-button"
-                onClick={() => {
-                  window.location.href = "/admin/import";
-                }}
-              >
-                + 백업 폴더 가져오기
-              </button>
-
-              <button
-                type="button"
-                className="logout-button"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-
-                  window.location.href = "/";
-                }}
-              >
-                로그아웃
-              </button>
-            </div>
-          )}
-        </header>
+        <ArchiveFilters
+          type={photoType}
+          setType={setPhotoType}
+          sortOrder={sortOrder}
+          setSortOrder={setSortOrder}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+          typeLabel="사진 유형"
+          allActive={photoType === "전체" && search.trim() === ""}
+          onAllClick={() => {
+            setPhotoType("전체");
+            setSearch("");
+          }}
+        />
 
         {/* =========================
-            파란색 메인 프레임
-        ========================= */}
-
-        <div className="blue-frame">
-          {/* 프로필 */}
-
-          <aside className="profile">
-            <div className="profile-image">PROFILE</div>
-
-            <div className="profile-name">링링의 한 마디</div>
-
-            <div className="profile-text">하이류~~~</div>
-
-            <div className="profile-line" />
-
-            <div className="profile-info">
-              <span>TODAY</span>
-
-              <strong>23</strong>
-            </div>
-
-            <div className="profile-info">
-              <span>TOTAL</span>
-
-              <strong>
-                {isAdmin
-                  ? photos.length
-                  : photos.filter((photo) => photo.archive_visible !== false)
-                      .length}
-              </strong>
-            </div>
-
-            <div className="music">♪ 오늘만 I LOVE YOU</div>
-          </aside>
-
-          <div className="notebook-rings">
-            <div className="ring-group top-rings">
-              <div className="notebook-ring" />
-              <div className="notebook-ring" />
-            </div>
-
-            <div className="ring-group bottom-rings">
-              <div className="notebook-ring" />
-              <div className="notebook-ring" />
-            </div>
-          </div>
-
-          {/* 본문 */}
-
-          <main className="content">
-            <div className="archive-side-tabs">
-              <button
-                type="button"
-                className="archive-side-tab active"
-                onClick={() => {
-                  window.location.href = isAdmin ? "/admin" : "/";
-                }}
-              >
-                사진
-              </button>
-
-              <button
-                type="button"
-                className="archive-side-tab"
-                onClick={() => {
-                  window.location.href = isAdmin ? "/admin/videos" : "/videos";
-                }}
-              >
-                동영상
-              </button>
-
-              {isAdmin && (
-                <button
-                  type="button"
-                  className="archive-side-tab"
-                  onClick={() => {
-                    window.location.href = "/admin/posts";
-                  }}
-                >
-                  게시글
-                </button>
-              )}
-            </div>
-
-            {/* 필터 */}
-
-            <div className="filter-bar">
-              <button
-                className={`all-tab ${photoType === "전체" ? "active" : ""}`}
-                onClick={() => {
-                  setPhotoType("전체");
-                  setSearch("");
-                }}
-              >
-                전체
-              </button>
-
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-              >
-                <option value="최신순">최신순</option>
-
-                <option value="오래된순">오래된순</option>
-              </select>
-
-              <select
-                value={photoType}
-                onChange={(e) => setPhotoType(e.target.value)}
-              >
-                <option value="전체">사진 유형</option>
-
-                <option value="셀카">셀카</option>
-
-                <option value="남찍사">남찍사</option>
-
-                <option value="거울셀카">거울셀카</option>
-
-                <option value="그외">그외</option>
-              </select>
-
-              <div className="date-filter">
-                <span>since</span>
-
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-
-                <span>until</span>
-
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* =========================
                 사진
             ========================= */}
 
-            <div className="photo-grid">
-              {filteredPhotos.map((photo) => (
-                <div
-                  className="photo-item"
-                  key={photo.id}
-                  onClick={() => {
-                    setSelectedPhoto(photo);
-                    setEditMode(false);
+        <div className="photo-grid">
+          {filteredPhotos.map((photo) => (
+            <div
+              className="photo-item"
+              key={photo.id}
+              onClick={() => {
+                setSelectedPhoto(photo);
+                setEditMode(false);
+              }}
+            >
+              <div className="photo">
+                <img
+                  src={photo.thumbnail_url || photo.image_url}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  style={{
+                    objectPosition: photo.crop_position || "50% 50%",
                   }}
-                >
-                  <div className="photo">
-                    <img
-                      src={photo.thumbnail_url || photo.image_url}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      style={{
-                        objectPosition: photo.crop_position || "50% 50%",
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
+                />
+              </div>
             </div>
-          </main>
+          ))}
         </div>
-      </div>
+      </ArchiveLayout>
 
       {/* =========================
           사진 상세 모달
@@ -1236,7 +1048,19 @@ async function getPhotoPost(photo) {
             {/* 큰 사진 */}
 
             <div className="modal-image">
-              <img src={selectedPhoto.image_url} alt="" />
+              {/* 블러 배경 */}
+              <img
+                className="modal-image-background"
+                src={selectedPhoto.image_url}
+                alt=""
+              />
+
+              {/* 실제 사진 */}
+              <img
+                className="modal-image-main"
+                src={selectedPhoto.image_url}
+                alt=""
+              />
             </div>
 
             {/* 정보 */}
@@ -1482,7 +1306,7 @@ async function getPhotoPost(photo) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
