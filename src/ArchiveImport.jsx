@@ -30,6 +30,10 @@ function ArchiveImport() {
   // 발견 목록은 50개씩 나눠서 표시
   const [importPage, setImportPage] = useState(1);
 
+  const [bulkHairColor, setBulkHairColor] = useState("");
+  const [uploadingAll, setUploadingAll] = useState(false);
+  const [uploadAllProgress, setUploadAllProgress] = useState("");
+
   const IMPORT_PAGE_SIZE = 50;
 
   const objectUrlsRef = useRef([]);
@@ -657,6 +661,10 @@ function ArchiveImport() {
 
         type: "셀카",
 
+        tags: isMembership ? "멤버쉽" : "",
+
+        searchTags: "",
+
         file,
 
         fileName: file.name,
@@ -1044,6 +1052,32 @@ function ArchiveImport() {
   }
 
   // =========================
+  // 불러온 모든 미업로드 사진 머리색 일괄 변경
+  // =========================
+
+  function applyHairColorToAllPhotos() {
+    if (!bulkHairColor) {
+      window.alert("적용할 머리색을 먼저 선택해주세요.");
+      return;
+    }
+
+    setDrafts((prev) =>
+      prev.map((draft) => {
+        if (draft.status === "uploaded") return draft;
+
+        return {
+          ...draft,
+          media: draft.media.map((item) =>
+            item.kind === "photo"
+              ? { ...item, hairColor: bulkHairColor }
+              : item,
+          ),
+        };
+      }),
+    );
+  }
+
+  // =========================
   // Storage 파일명 안전하게
   // =========================
 
@@ -1392,6 +1426,16 @@ function ArchiveImport() {
 
             type: item.type || null,
 
+            tags: (item.tags || "")
+              .split(",")
+              .map((tag) => tag.trim())
+              .filter(Boolean),
+
+            search_tags: (item.searchTags || "")
+              .split(",")
+              .map((tag) => tag.trim())
+              .filter(Boolean),
+
             crop_position: `${item.cropX}% ${item.cropY}%`,
 
             media_order: mediaOrder,
@@ -1419,6 +1463,8 @@ function ArchiveImport() {
             : item,
         ),
       );
+
+      return true;
     } catch (error) {
       console.error("게시글 업로드 오류:", error);
 
@@ -1448,7 +1494,58 @@ function ArchiveImport() {
             : item,
         ),
       );
+
+      return false;
     }
+  }
+
+  // =========================
+  // 미업로드 게시글 전체 순차 업로드
+  // =========================
+
+  async function uploadAllDrafts() {
+    if (uploadingAll) return;
+
+    const pendingDrafts = drafts.filter(
+      (draft) => draft.status !== "uploaded" && draft.status !== "uploading",
+    );
+
+    if (pendingDrafts.length === 0) {
+      window.alert("업로드할 게시글이 없습니다.");
+      return;
+    }
+
+    const ok = window.confirm(
+      `미업로드 게시글 ${pendingDrafts.length}개를 순서대로 전부 업로드할까요?`,
+    );
+
+    if (!ok) return;
+
+    setUploadingAll(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      for (let index = 0; index < pendingDrafts.length; index++) {
+        const draft = pendingDrafts[index];
+
+        setUploadAllProgress(
+          `${index + 1} / ${pendingDrafts.length} · ${draft.folderName}`,
+        );
+
+        const uploaded = await uploadDraft(draft.id);
+
+        if (uploaded) successCount += 1;
+        else failCount += 1;
+      }
+    } finally {
+      setUploadingAll(false);
+      setUploadAllProgress("");
+    }
+
+    window.alert(
+      `전체 업로드가 끝났습니다.\n성공 ${successCount}개 / 실패 ${failCount}개`,
+    );
   }
 
   const totalImportPages = Math.max(
@@ -1622,13 +1719,49 @@ function ArchiveImport() {
         <div className="archive-draft-list-header">
           <span>불러온 게시글 {drafts.length}개</span>
 
-          <button
-            type="button"
-            className="archive-clear-all-button"
-            onClick={clearAllDrafts}
+          <div
+            className="archive-import-bulk-actions"
+            style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
           >
-            목록 전체 삭제
-          </button>
+            <select
+              value={bulkHairColor}
+              disabled={uploadingAll}
+              onChange={(e) => setBulkHairColor(e.target.value)}
+            >
+              <option value="">머리색 일괄 선택</option>
+              <option value="흑발">흑발</option>
+              <option value="갈발">갈발</option>
+              <option value="금발">금발</option>
+              <option value="적발">적발</option>
+              <option value="은발">은발</option>
+              <option value="핑크">핑크</option>
+            </select>
+
+            <button
+              type="button"
+              disabled={!bulkHairColor || uploadingAll}
+              onClick={applyHairColorToAllPhotos}
+            >
+              전체 사진에 적용
+            </button>
+
+            <button
+              type="button"
+              disabled={uploadingAll}
+              onClick={uploadAllDrafts}
+            >
+              {uploadingAll ? uploadAllProgress : "게시글 전부 업로드"}
+            </button>
+
+            <button
+              type="button"
+              className="archive-clear-all-button"
+              disabled={uploadingAll}
+              onClick={clearAllDrafts}
+            >
+              목록 전체 삭제
+            </button>
+          </div>
         </div>
       )}
       <div className="archive-draft-list">
@@ -1865,19 +1998,62 @@ function ArchiveImport() {
                     )}
 
                     {item.kind === "video" && (
-                      <select
-                        value={item.type || ""}
-                        disabled={draft.status === "uploaded"}
-                        onChange={(e) =>
-                          updateMedia(draft.id, item.id, "type", e.target.value)
-                        }
-                      >
-                        <option value="">동영상 유형</option>
-                        <option value="셀카">셀카</option>
-                        <option value="남찍사">남찍사</option>
-                        <option value="거울셀카">거울셀카</option>
-                        <option value="그외">그외</option>
-                      </select>
+                      <>
+                        <select
+                          value={item.type || ""}
+                          disabled={draft.status === "uploaded"}
+                          onChange={(e) =>
+                            updateMedia(
+                              draft.id,
+                              item.id,
+                              "type",
+                              e.target.value,
+                            )
+                          }
+                        >
+                          <option value="">동영상 유형</option>
+                          <option value="셀카">셀카</option>
+                          <option value="남찍사">남찍사</option>
+                          <option value="거울셀카">거울셀카</option>
+                          <option value="그외">그외</option>
+                        </select>
+
+                        <label style={{ display: "grid", gap: "4px" }}>
+                          동영상 태그
+                          <input
+                            type="text"
+                            placeholder="쉼표로 구분"
+                            value={item.tags || ""}
+                            disabled={draft.status === "uploaded"}
+                            onChange={(e) =>
+                              updateMedia(
+                                draft.id,
+                                item.id,
+                                "tags",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </label>
+
+                        <label style={{ display: "grid", gap: "4px" }}>
+                          동영상 검색 태그
+                          <input
+                            type="text"
+                            placeholder="쉼표로 구분"
+                            value={item.searchTags || ""}
+                            disabled={draft.status === "uploaded"}
+                            onChange={(e) =>
+                              updateMedia(
+                                draft.id,
+                                item.id,
+                                "searchTags",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </label>
+                      </>
                     )}
 
                     {/* 순서 */}

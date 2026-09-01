@@ -991,3 +991,40 @@
   }
 
 }
+
+.archive-import-bulk-actions,
+.archive-import-bulk-hair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.archive-import-bulk-actions select,
+.archive-import-bulk-actions button {
+  min-height: 36px;
+}
+
+.archive-upload-all-button {
+  background: #111;
+  border: 1px solid #111;
+  color: #fff;
+}
+
+.archive-upload-all-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@media (max-width: 760px) {
+  .archive-import-bulk-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .archive-import-bulk-hair {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+}
