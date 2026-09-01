@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import ArchiveLayout from "./ArchiveLayout";
 import ArchiveFilters from "./ArchiveFilters";
@@ -9,6 +9,11 @@ function Videos({ isAdmin = false }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [thumbnailTime, setThumbnailTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [savingThumbnail, setSavingThumbnail] = useState(false);
+  const modalVideoRef = useRef(null);
+  const modalBackgroundRef = useRef(null);
 
   const [sortOrder, setSortOrder] = useState("최신순");
 
@@ -23,6 +28,69 @@ function Videos({ isAdmin = false }) {
   useEffect(() => {
     loadVideos();
   }, []);
+
+  useEffect(() => {
+    if (!selectedVideo) return;
+
+    setThumbnailTime(Number(selectedVideo.thumbnail_time) || 0);
+    setVideoDuration(0);
+  }, [selectedVideo]);
+
+  function showThumbnailFrame(element, time) {
+    const nextTime = Math.max(0, Number(time) || 0);
+
+    if (Number.isFinite(element.duration)) {
+      element.currentTime = Math.min(nextTime, element.duration);
+    }
+
+    element.pause();
+  }
+
+  function handleThumbnailChange(value) {
+    const nextTime = Number(value);
+    setThumbnailTime(nextTime);
+
+    if (modalVideoRef.current) {
+      showThumbnailFrame(modalVideoRef.current, nextTime);
+    }
+
+    if (modalBackgroundRef.current) {
+      showThumbnailFrame(modalBackgroundRef.current, nextTime);
+    }
+  }
+
+  async function saveThumbnailTime() {
+    if (!selectedVideo) return;
+
+    setSavingThumbnail(true);
+
+    try {
+      const { error } = await supabase
+        .from("videos")
+        .update({ thumbnail_time: thumbnailTime })
+        .eq("id", selectedVideo.id);
+
+      if (error) throw error;
+
+      setVideos((current) =>
+        current.map((video) =>
+          video.id === selectedVideo.id
+            ? { ...video, thumbnail_time: thumbnailTime }
+            : video
+        )
+      );
+
+      setSelectedVideo((current) => ({
+        ...current,
+        thumbnail_time: thumbnailTime,
+      }));
+    } catch (error) {
+      console.error("썸네일 장면 저장 오류:", error);
+      alert("썸네일 장면을 저장하지 못했습니다.");
+    } finally {
+      setSavingThumbnail(false);
+    }
+  }
 
   async function loadVideos() {
     setLoading(true);
@@ -209,11 +277,17 @@ function Videos({ isAdmin = false }) {
                         >
                           <div className="video-preview">
                             <video
+                              key={`${video.id}-${video.thumbnail_time || 0}`}
                               src={video.video_url}
-                              
                               preload="metadata"
                               muted
                               playsInline
+                              onLoadedMetadata={(event) =>
+                                showThumbnailFrame(
+                                  event.currentTarget,
+                                  video.thumbnail_time
+                                )
+                              }
                             />
                             <div className="video-thumbnail-play">▶</div>
                           </div>
@@ -279,16 +353,62 @@ function Videos({ isAdmin = false }) {
 
                     <div className="video-modal-player">
                       <video
+                        ref={modalBackgroundRef}
+                        className="video-modal-background"
+                        src={selectedVideo.video_url}
+                        poster={selectedVideo.thumbnail_url || undefined}
+                        muted
+                        preload="metadata"
+                        playsInline
+                        aria-hidden="true"
+                        onLoadedMetadata={(event) =>
+                          showThumbnailFrame(event.currentTarget, thumbnailTime)
+                        }
+                      />
+                      <video
+                        ref={modalVideoRef}
+                        className="video-modal-main"
                         src={selectedVideo.video_url}
                         poster={selectedVideo.thumbnail_url || undefined}
                         controls
                         controlsList="nodownload"
                         preload="metadata"
                         playsInline
+                        onLoadedMetadata={(event) => {
+                          setVideoDuration(event.currentTarget.duration || 0);
+                          showThumbnailFrame(event.currentTarget, thumbnailTime);
+                        }}
                       />
                     </div>
 
                     <div className="video-modal-info">
+                      {isAdmin && videoDuration > 0 && (
+                        <div className="video-thumbnail-editor">
+                          <div className="video-thumbnail-editor-title">
+                            썸네일 장면 선택
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max={videoDuration}
+                            step="0.1"
+                            value={thumbnailTime}
+                            onChange={(event) =>
+                              handleThumbnailChange(event.target.value)
+                            }
+                          />
+                          <div className="video-thumbnail-editor-bottom">
+                            <span>{thumbnailTime.toFixed(1)}초</span>
+                            <button
+                              type="button"
+                              onClick={saveThumbnailTime}
+                              disabled={savingThumbnail}
+                            >
+                              {savingThumbnail ? "저장 중..." : "이 장면 저장"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       {getPost(selectedVideo) && (
                         <div className="video-date">
                           <span>{formatDate(getPost(selectedVideo).date)}</span>

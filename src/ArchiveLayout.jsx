@@ -19,16 +19,11 @@ function ArchiveLayout({
   // 이 안에 사진 그리드 / 동영상 그리드가 들어감
   children,
 }) {
-  // =========================
-  // 공통 프로필 TOTAL
-  // =========================
-
-  const [profileTotal, setProfileTotal] = useState(0);
+  const [visitorCounts, setVisitorCounts] = useState({ today: 0, total: 0 });
   const [profileImage, setProfileImage] = useState("");
   const [uploadingProfile, setUploadingProfile] = useState(false);
 
   useEffect(() => {
-    loadProfileTotal();
     // =========================
     // 프로필 사진 불러오기
     // =========================
@@ -143,27 +138,37 @@ function ArchiveLayout({
     loadProfileImage();
   }, [isAdmin]);
 
-  async function loadProfileTotal() {
-    const { data, error } = await supabase
-      .from("photos")
-      .select("id, archive_visible");
+  useEffect(() => {
+    async function registerVisitor() {
+      try {
+        let visitorId = localStorage.getItem("riwoo_visitor_id");
 
-    if (error) {
-      console.error("프로필 TOTAL을 불러오지 못했습니다:", error);
+        if (!visitorId) {
+          visitorId =
+            window.crypto?.randomUUID?.() ||
+            `visitor-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          localStorage.setItem("riwoo_visitor_id", visitorId);
+        }
 
-      return;
+        const { data, error } = await supabase.rpc("register_site_visit", {
+          visitor_key: visitorId,
+        });
+
+        if (error) throw error;
+
+        const counts = Array.isArray(data) ? data[0] : data;
+        setVisitorCounts({
+          today: Number(counts?.today_count) || 0,
+          total: Number(counts?.total_count) || 0,
+        });
+      } catch (error) {
+        console.error("방문자 수를 불러오지 못했습니다:", error);
+      }
     }
 
-    const photoList = data || [];
+    registerVisitor();
+  }, []);
 
-    // 관리자에서는 전체 사진 수
-    // 일반 사용자는 공개 사진 수만
-    const total = isAdmin
-      ? photoList.length
-      : photoList.filter((photo) => photo.archive_visible !== false).length;
-
-    setProfileTotal(total);
-  }
   // =========================
   // 프로필 사진 불러오기
   // =========================
@@ -343,6 +348,16 @@ function ArchiveLayout({
         ========================= */}
 
         <div className="blue-frame">
+          <div className="archive-book-heading">
+            <div className="archive-visitor-counter">
+              <span>TODAY <strong>{visitorCounts.today}</strong></span>
+              <i>|</i>
+              <span>TOTAL <strong>{visitorCounts.total}</strong></span>
+            </div>
+
+            <div className="archive-book-title">링링일기</div>
+          </div>
+
           {/* =========================
               공통 프로필
           ========================= */}
@@ -375,16 +390,6 @@ function ArchiveLayout({
             <div className="profile-text">하이류~~~</div>
 
             <div className="profile-line" />
-
-            <div className="profile-info">
-              <span>TODAY</span>
-              <strong>23</strong>
-            </div>
-
-            <div className="profile-info">
-              <span>TOTAL</span>
-              <strong>{profileTotal}</strong>
-            </div>
 
             <div className="music">♪ 오늘만 I LOVE YOU</div>
           </aside>

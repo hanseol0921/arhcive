@@ -131,12 +131,107 @@ function ArchiveImport() {
   // PDF 텍스트 읽기
   // =========================
 
+  function readRawPdfInfoString(pdfBytes, key) {
+    const source = new TextDecoder("latin1").decode(pdfBytes);
+    const marker = `/${key}`;
+    const markerIndex = source.indexOf(marker);
+    if (markerIndex < 0) return "";
+
+    let index = markerIndex + marker.length;
+    while (/\s/.test(source[index] || "")) index += 1;
+    const bytes = [];
+
+    if (source[index] === "<" && source[index + 1] !== "<") {
+      const end = source.indexOf(">", index + 1);
+      if (end < 0) return "";
+      const hex = source.slice(index + 1, end).replace(/\s+/g, "");
+      for (let i = 0; i + 1 < hex.length; i += 2) {
+        bytes.push(Number.parseInt(hex.slice(i, i + 2), 16));
+      }
+    } else if (source[index] === "(") {
+      index += 1;
+      let depth = 1;
+      while (index < source.length && depth > 0) {
+        const char = source[index++];
+        if (char === "\\") {
+          const escaped = source[index++] || "";
+          if (/[0-7]/.test(escaped)) {
+            let octal = escaped;
+            for (let count = 0; count < 2 && /[0-7]/.test(source[index] || ""); count += 1) {
+              octal += source[index++];
+            }
+            bytes.push(Number.parseInt(octal, 8));
+          } else if (escaped === "n") bytes.push(10);
+          else if (escaped === "r") bytes.push(13);
+          else if (escaped === "t") bytes.push(9);
+          else if (escaped === "b") bytes.push(8);
+          else if (escaped === "f") bytes.push(12);
+          else if (escaped === "\r" && source[index] === "\n") index += 1;
+          else if (escaped !== "\r" && escaped !== "\n") bytes.push(escaped.charCodeAt(0));
+        } else if (char === "(") {
+          depth += 1;
+          bytes.push(char.charCodeAt(0));
+        } else if (char === ")") {
+          depth -= 1;
+          if (depth > 0) bytes.push(char.charCodeAt(0));
+        } else {
+          bytes.push(char.charCodeAt(0) & 255);
+        }
+      }
+    } else {
+      return "";
+    }
+
+    if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+      let result = "";
+      for (let i = 2; i + 1 < bytes.length; i += 2) {
+        result += String.fromCharCode((bytes[i] << 8) | bytes[i + 1]);
+      }
+      return result;
+    }
+    return new TextDecoder("utf-8").decode(new Uint8Array(bytes));
+  }
+
   async function readPdfText(file) {
-    const buffer = await file.arrayBuffer();
+    const sourceBuffer = await file.arrayBuffer();
+    const pdfBytes = new Uint8Array(sourceBuffer);
+    // PDF.js가 전달받은 ArrayBuffer를 worker로 넘기며 분리할 수 있으므로 복사본 사용
+    const buffer = sourceBuffer.slice(0);
+    const rawMetadataBody = readRawPdfInfoString(pdfBytes, "WeverseBodyText");
+    const rawMetadataDate = readRawPdfInfoString(pdfBytes, "WeversePostDate");
+    const rawMetadataUrl = readRawPdfInfoString(pdfBytes, "WeversePostURL");
 
     const pdf = await pdfjsLib.getDocument({
       data: buffer,
     }).promise;
+
+    // v32 PDF는 화면용 본문과 별개로 원문을 Custom metadata에
+    // 줄바꿈까지 정확히 보관한다. 텍스트 레이어보다 이를 우선 사용한다.
+    let exactMetadataBody = "";
+    let metadataDate = "";
+    let metadataUrl = "";
+
+    try {
+      const pdfMetadata = await pdf.getMetadata();
+      const info = pdfMetadata?.info || {};
+      const custom = info?.Custom || info?.custom || {};
+
+      exactMetadataBody = String(
+        rawMetadataBody ||
+          custom.WeverseBodyText ||
+          info.WeverseBodyText ||
+          pdfMetadata?.metadata?.get?.("WeverseBodyText") ||
+          "",
+      );
+      metadataDate = String(
+        rawMetadataDate || custom.WeversePostDate || info.WeversePostDate || "",
+      );
+      metadataUrl = String(
+        rawMetadataUrl || custom.WeversePostURL || info.WeversePostURL || "",
+      );
+    } catch (metadataError) {
+      console.warn("PDF 원문 메타데이터를 읽지 못했습니다:", metadataError);
+    }
 
     const pages = [];
 
@@ -145,57 +240,141 @@ function ArchiveImport() {
 
       const content = await page.getTextContent();
 
+      const textItems = content.items.filter(
+        (item) => typeof item.str === "string" && item.transform,
+      );
+
       const lines = [];
+      let currentLine = [];
+      let currentY = null;
+      let previousItem = null;
 
-      for (const item of content.items) {
-        if (!item.str || !item.transform) {
-          continue;
+      function finishLine() {
+        if (currentLine.length === 0) return;
+
+        const lineText = currentLine
+          .map((part) => part.text)
+          .join("")
+          .replace(/[ \t]+/g, " ")
+          .trim();
+
+        if (lineText) {
+          lines.push({
+            text: lineText,
+            y: currentY,
+            height: Math.max(
+              ...currentLine.map((part) => Number(part.height) || 0),
+              1,
+            ),
+          });
         }
 
-        const x = item.transform[4];
-
-        const y = item.transform[5];
-
-        // 같은 줄인지 판단할 Y좌표 오차
-        const tolerance = 2;
-
-        let line = lines.find(
-          (existingLine) => Math.abs(existingLine.y - y) <= tolerance,
-        );
-
-        if (!line) {
-          line = {
-            y,
-            items: [],
-          };
-
-          lines.push(line);
-        }
-
-        line.items.push({
-          x,
-          text: item.str,
-        });
+        currentLine = [];
+        previousItem = null;
       }
 
-      // PDF는 위쪽일수록 y값이 큼
-      lines.sort((a, b) => b.y - a.y);
+      for (const item of textItems) {
+        const x = Number(item.transform[4]) || 0;
+        const y = Number(item.transform[5]) || 0;
+        const height = Math.abs(Number(item.height) || Number(item.transform[3]) || 0);
+        const tolerance = Math.max(2, height * 0.3);
 
-      const pageLines = lines.map((line) => {
-        // 같은 줄 안에서는
-        // 왼쪽 → 오른쪽 순서
-        line.items.sort((a, b) => a.x - b.x);
+        // PDF.js의 명시적 줄 끝 또는 Y좌표 변화 모두 줄바꿈으로 처리
+        if (currentY !== null && Math.abs(currentY - y) > tolerance) {
+          finishLine();
+        }
 
-        return line.items
-          .map((item) => item.text)
-          .join("")
-          .trim();
+        if (currentLine.length === 0) {
+          currentY = y;
+        }
+
+        // 같은 줄의 text item 사이에 실제 간격이 있으면 공백 보존
+        if (previousItem) {
+          const previousEndX =
+            previousItem.x + (Number(previousItem.width) || 0);
+          const gap = x - previousEndX;
+          const spaceThreshold = Math.max(1.5, height * 0.18);
+
+          if (
+            gap > spaceThreshold &&
+            !/\s$/.test(previousItem.text) &&
+            !/^\s/.test(item.str)
+          ) {
+            currentLine.push({ text: " ", x, width: 0, height });
+          }
+        }
+
+        currentLine.push({
+          text: item.str,
+          x,
+          width: Number(item.width) || 0,
+          height,
+        });
+
+        previousItem = currentLine[currentLine.length - 1];
+
+        if (item.hasEOL) {
+          finishLine();
+          currentY = null;
+        }
+      }
+
+      finishLine();
+
+      const pageParts = [];
+
+      lines.forEach((line, index) => {
+        if (index > 0) {
+          const previousLine = lines[index - 1];
+          const verticalGap = Math.abs(previousLine.y - line.y);
+          const normalLineHeight = Math.max(previousLine.height, line.height, 1);
+
+          // PDF의 줄 간격만큼 빈 줄 개수도 그대로 복원
+          const missingLineCount = Math.max(
+            0,
+            Math.round(verticalGap / normalLineHeight) - 1,
+          );
+
+          for (let blankIndex = 0; blankIndex < missingLineCount; blankIndex++) {
+            pageParts.push("");
+          }
+        }
+
+        pageParts.push(line.text);
       });
 
-      pages.push(pageLines.filter(Boolean).join("\n"));
+      pages.push(pageParts.join("\n"));
     }
 
-    return pages.join("\n");
+    const extractedText = pages.join("\n\n");
+
+    if (exactMetadataBody) {
+      // 구버전 v32 PDF에는 날짜/링크 전용 metadata가 없으므로
+      // 한 줄 텍스트 레이어에서 헤더만 보완해 사용한다.
+      const extractedDateTime = extractedText.match(
+        /(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2})/,
+      );
+      const extractedLink = extractedText.match(
+        /원본\s*링크\s*:\s*(https?:\/\/[^\s]+)/i,
+      );
+
+      const dateLine =
+        metadataDate ||
+        (extractedDateTime
+          ? `${extractedDateTime[1]} ${extractedDateTime[2]}`
+          : "");
+      const originalUrl = metadataUrl || extractedLink?.[1] || "";
+
+      return [
+        dateLine,
+        originalUrl ? `원본 링크: ${originalUrl}` : "",
+        exactMetadataBody,
+      ]
+        .filter((value, index) => index === 2 || Boolean(value))
+        .join("\n");
+    }
+
+    return extractedText;
   }
 
   // =========================
@@ -207,8 +386,10 @@ function ArchiveImport() {
     // 쪼개도 최대한 정상적으로 읽게 정리
     const normalizedText = String(text || "")
       .replace(/\u00a0/g, " ")
-      .replace(/\r/g, "")
+      .replace(/\r\n?/g, "\n")
       .replace(/[ \t]+/g, " ")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n[ \t]+/g, "\n")
       .trim();
 
     // =========================
@@ -257,12 +438,8 @@ function ArchiveImport() {
         afterLink = afterLink.slice(0, mediaMatch.index);
       }
 
-      content = afterLink
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .join("\n")
-        .trim();
+      // 본문 내부의 줄바꿈과 빈 줄은 PDF에서 읽은 그대로 유지
+      content = afterLink.trim();
     }
 
     return {
