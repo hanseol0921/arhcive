@@ -148,6 +148,9 @@ const [mediaOrder, setMediaOrder] = useState([]);
 
         cropX: 50,
         cropY: 50,
+
+        tags: "",
+        searchTags: "",
       };
 
       newVideos.push(video);
@@ -219,6 +222,23 @@ const [mediaOrder, setMediaOrder] = useState([]);
               [field]: value,
             }
           : photo
+      )
+    );
+  }
+
+  // =========================
+  // 동영상 정보 변경
+  // =========================
+
+  function updateVideo(id, field, value) {
+    setVideos((prev) =>
+      prev.map((video) =>
+        video.id === id
+          ? {
+              ...video,
+              [field]: value,
+            }
+          : video
       )
     );
   }
@@ -829,6 +849,12 @@ for (
     const videoUrl =
       videoUrlData.publicUrl;
 
+    const videoTagArray =
+      convertTags(video.tags);
+
+    const videoSearchTagArray =
+      convertTags(video.searchTags);
+
     // =========================
     // videos 테이블
     // =========================
@@ -849,6 +875,12 @@ for (
 
         crop_position:
           `${video.cropX}% ${video.cropY}%`,
+
+        tags:
+          videoTagArray,
+
+        search_tags:
+          videoSearchTagArray,
 
         media_order:
           currentMediaOrder,
@@ -1380,6 +1412,42 @@ for (
             title={video.file.name}
           >
             {video.file.name}
+          </div>
+
+          <div className="photo-form-grid">
+
+            <div className="mini-field">
+              <label>태그</label>
+              <input
+                type="text"
+                placeholder="쉼표로 구분"
+                value={video.tags}
+                onChange={(e) =>
+                  updateVideo(
+                    video.id,
+                    "tags",
+                    e.target.value
+                  )
+                }
+              />
+            </div>
+
+            <div className="mini-field">
+              <label>검색용 태그</label>
+              <input
+                type="text"
+                placeholder="쉼표로 구분"
+                value={video.searchTags}
+                onChange={(e) =>
+                  updateVideo(
+                    video.id,
+                    "searchTags",
+                    e.target.value
+                  )
+                }
+              />
+            </div>
+
           </div>
 
         </div>
