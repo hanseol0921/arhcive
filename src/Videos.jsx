@@ -12,12 +12,21 @@ function Videos({ isAdmin = false }) {
   const [thumbnailTime, setThumbnailTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [savingThumbnail, setSavingThumbnail] = useState(false);
+  const [editingVideo, setEditingVideo] = useState(false);
+  const [savingVideo, setSavingVideo] = useState(false);
+  const [editVideoType, setEditVideoType] = useState("");
+  const [editVideoHairColor, setEditVideoHairColor] = useState("");
+  const [editVideoTags, setEditVideoTags] = useState("");
+  const [editVideoSearchTags, setEditVideoSearchTags] = useState("");
   const modalVideoRef = useRef(null);
   const modalBackgroundRef = useRef(null);
 
   const [sortOrder, setSortOrder] = useState("최신순");
 
   const [videoType, setVideoType] = useState("전체");
+
+  const [videoTag, setVideoTag] = useState("전체");
+  const [videoHairColor, setVideoHairColor] = useState("전체");
 
   const [search, setSearch] = useState("");
 
@@ -34,7 +43,91 @@ function Videos({ isAdmin = false }) {
 
     setThumbnailTime(Number(selectedVideo.thumbnail_time) || 0);
     setVideoDuration(0);
+    setEditingVideo(false);
+    setEditVideoType(selectedVideo.type || "");
+    setEditVideoHairColor(selectedVideo.hair_color || "");
+    setEditVideoTags(
+      Array.isArray(selectedVideo.tags) ? selectedVideo.tags.join(", ") : "",
+    );
+    setEditVideoSearchTags(
+      Array.isArray(selectedVideo.search_tags)
+        ? selectedVideo.search_tags.join(", ")
+        : "",
+    );
   }, [selectedVideo]);
+
+  function splitTags(value) {
+    return value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
+
+  async function saveVideoDetails() {
+    if (!selectedVideo) return;
+
+    const nextValues = {
+      type: editVideoType || null,
+      hair_color: editVideoHairColor || null,
+      tags: splitTags(editVideoTags),
+      search_tags: splitTags(editVideoSearchTags),
+    };
+
+    setSavingVideo(true);
+    try {
+      const { error } = await supabase
+        .from("videos")
+        .update(nextValues)
+        .eq("id", selectedVideo.id);
+
+      if (error) throw error;
+
+      const updatedVideo = { ...selectedVideo, ...nextValues };
+      setVideos((current) =>
+        current.map((video) =>
+          video.id === selectedVideo.id ? updatedVideo : video,
+        ),
+      );
+      setSelectedVideo(updatedVideo);
+      setEditingVideo(false);
+    } catch (error) {
+      console.error("동영상 정보 수정 오류:", error);
+      alert("동영상 정보를 수정하지 못했습니다.");
+    } finally {
+      setSavingVideo(false);
+    }
+  }
+
+  async function deleteSelectedVideo() {
+    if (!selectedVideo) return;
+    if (!window.confirm("이 동영상을 삭제할까요? 삭제 후 복구할 수 없습니다.")) {
+      return;
+    }
+
+    try {
+      const targetId = selectedVideo.id;
+      const { error } = await supabase.from("videos").delete().eq("id", targetId);
+      if (error) throw error;
+
+      const publicMarker = "/storage/v1/object/public/videos/";
+      const path = selectedVideo.video_url?.includes(publicMarker)
+        ? decodeURIComponent(selectedVideo.video_url.split(publicMarker)[1])
+        : "";
+      if (path) await supabase.storage.from("videos").remove([path]);
+
+      setVideos((current) => current.filter((video) => video.id !== targetId));
+      setSelectedVideo(null);
+    } catch (error) {
+      console.error("동영상 삭제 오류:", error);
+      alert("동영상을 삭제하지 못했습니다.");
+    }
+  }
+
+  function searchVideoTag(tag) {
+    setVideoTag("전체");
+    setSearch(tag);
+    setSelectedVideo(null);
+  }
 
   function showThumbnailFrame(element, time) {
     const nextTime = Math.max(0, Number(time) || 0);
@@ -178,6 +271,15 @@ function Videos({ isAdmin = false }) {
         // 유형
         const matchesType = videoType === "전체" || video.type === videoType;
 
+        const tags = Array.isArray(video.tags) ? video.tags : [];
+        const searchTags = Array.isArray(video.search_tags)
+          ? video.search_tags
+          : [];
+
+        const matchesTag = videoTag === "전체" || tags.includes(videoTag);
+        const matchesHairColor =
+          videoHairColor === "전체" || video.hair_color === videoHairColor;
+
         // 시작 날짜
         const matchesStartDate =
           !startDate || (videoDate && videoDate >= startDate);
@@ -185,7 +287,29 @@ function Videos({ isAdmin = false }) {
         // 종료 날짜
         const matchesEndDate = !endDate || (videoDate && videoDate <= endDate);
 
-        return matchesType && matchesStartDate && matchesEndDate;
+        const normalizedSearch = search.trim().toLowerCase();
+        const searchableValues = [
+          video.type,
+          videoDate,
+          post?.content,
+          ...tags,
+          ...searchTags,
+        ];
+
+        const matchesSearch =
+          !normalizedSearch ||
+          searchableValues.some((value) =>
+            String(value || "").toLowerCase().includes(normalizedSearch),
+          );
+
+        return (
+          matchesType &&
+          matchesHairColor &&
+          matchesTag &&
+          matchesStartDate &&
+          matchesEndDate &&
+          matchesSearch
+        );
       })
       .sort((a, b) => {
         const aTime = getVideoSortTime(a);
@@ -194,7 +318,27 @@ function Videos({ isAdmin = false }) {
 
         return sortOrder === "최신순" ? bTime - aTime : aTime - bTime;
       });
-  }, [videos, posts, sortOrder, videoType, startDate, endDate]);
+  }, [
+    videos,
+    posts,
+    sortOrder,
+    videoType,
+    videoTag,
+    videoHairColor,
+    search,
+    startDate,
+    endDate,
+  ]);
+
+  const videoTagOptions = useMemo(
+    () =>
+      [...new Set(videos.flatMap((video) =>
+        Array.isArray(video.tags) ? video.tags : [],
+      ))]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "ko")),
+    [videos],
+  );
 
   async function downloadVideo(video) {
     try {
@@ -247,9 +391,24 @@ function Videos({ isAdmin = false }) {
                   endDate={endDate}
                   setEndDate={setEndDate}
                   typeLabel="동영상 유형"
-                  allActive={videoType === "전체" && search.trim() === ""}
+                  secondaryValue={videoHairColor}
+                  setSecondaryValue={setVideoHairColor}
+                  secondaryLabel="머리색"
+                  secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머"]}
+                  tertiaryValue={videoTag}
+                  setTertiaryValue={setVideoTag}
+                  tertiaryLabel="동영상 태그"
+                  tertiaryOptions={videoTagOptions}
+                  allActive={
+                    videoType === "전체" &&
+                    videoHairColor === "전체" &&
+                    videoTag === "전체" &&
+                    search.trim() === ""
+                  }
                   onAllClick={() => {
                     setVideoType("전체");
+                    setVideoHairColor("전체");
+                    setVideoTag("전체");
                     setSearch("");
                   }}
                 />
@@ -420,8 +579,106 @@ function Videos({ isAdmin = false }) {
                         </div>
                       )}
 
-                      {selectedVideo.type && (
-                        <div className="video-type">{selectedVideo.type}</div>
+                      {(selectedVideo.type || selectedVideo.hair_color) && (
+                        <div className="modal-meta">
+                          {selectedVideo.type}
+                          {selectedVideo.hair_color && (
+                            <><span>{" · "}</span>{selectedVideo.hair_color}</>
+                          )}
+                        </div>
+                      )}
+
+                      {!editingVideo && Array.isArray(selectedVideo.tags) && (
+                        <div className="modal-tags">
+                          {selectedVideo.tags.map((tag) => (
+                            <button
+                              type="button"
+                              className="tag"
+                              key={tag}
+                              onClick={() => searchVideoTag(tag)}
+                            >
+                              #{tag}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {isAdmin && editingVideo && (
+                        <div className="video-detail-editor">
+                          <label>
+                            동영상 유형
+                            <select
+                              value={editVideoType}
+                              onChange={(e) => setEditVideoType(e.target.value)}
+                            >
+                              <option value="">유형 선택</option>
+                              <option value="셀카">셀카</option>
+                              <option value="남찍사">남찍사</option>
+                              <option value="거울셀카">거울셀카</option>
+                              <option value="그외">그외</option>
+                            </select>
+                          </label>
+                          <label>
+                            머리색
+                            <select
+                              value={editVideoHairColor}
+                              onChange={(e) => setEditVideoHairColor(e.target.value)}
+                            >
+                              <option value="">머리색 선택</option>
+                              <option value="흑발">흑발</option>
+                              <option value="갈발">갈발</option>
+                              <option value="금발">금발</option>
+                              <option value="적발">적발</option>
+                              <option value="은발">은발</option>
+                              <option value="핑머">핑머</option>
+                            </select>
+                          </label>
+                          <label>
+                            태그
+                            <input
+                              value={editVideoTags}
+                              onChange={(e) => setEditVideoTags(e.target.value)}
+                              placeholder="쉼표로 구분"
+                            />
+                          </label>
+                          <label>
+                            검색 태그
+                            <input
+                              value={editVideoSearchTags}
+                              onChange={(e) =>
+                                setEditVideoSearchTags(e.target.value)
+                              }
+                              placeholder="쉼표로 구분"
+                            />
+                          </label>
+                          <div className="video-detail-editor-actions">
+                            <button
+                              type="button"
+                              onClick={() => setEditingVideo(false)}
+                              disabled={savingVideo}
+                            >
+                              취소
+                            </button>
+                            <button
+                              type="button"
+                              onClick={saveVideoDetails}
+                              disabled={savingVideo}
+                            >
+                              {savingVideo ? "저장 중..." : "저장"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {isAdmin && !editingVideo && (
+                        <div className="video-admin-actions">
+                          <button type="button" onClick={() => setEditingVideo(true)}>
+                            수정
+                          </button>
+                          <button type="button" onClick={deleteSelectedVideo}>
+                            삭제
+                          </button>
+                        </div>
                       )}
 
                       <button

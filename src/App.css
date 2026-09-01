@@ -4301,3 +4301,150 @@ body:has(.archive-import-page) {
   text-align: left !important;
 }
 
+/* 업로드 사진 관리 */
+body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
+.photo-manager-page { width: min(1180px, calc(100% - 40px)); margin: 32px auto 80px; color: #55514a; }
+.photo-manager-header { display: flex; align-items: flex-start; gap: 18px; margin-bottom: 18px; }
+.photo-manager-header h1 { margin: 0 0 5px; font-size: 30px; font-weight: 500; }
+.photo-manager-header p { margin: 0; font-size: 12px; }
+.photo-manager-toolbar { display: flex; align-items: end; gap: 8px; flex-wrap: wrap; padding: 16px; border: 1px solid #d9d4cb; border-radius: 12px; background: #fff; }
+.photo-manager-toolbar label { display: grid; gap: 4px; font-size: 10px; }
+.photo-manager-toolbar input, .photo-manager-toolbar select, .photo-manager-toolbar button { min-height: 34px; }
+.photo-manager-summary { margin: 14px 2px; font-size: 11px; }
+.photo-manager-posts { display: grid; gap: 16px; }
+.photo-manager-post { padding: 18px; border: 1px solid #d9d4cb; border-radius: 12px; background: #fff; }
+.photo-manager-post-head { display: flex; align-items: center; gap: 14px; padding-bottom: 12px; border-bottom: 1px solid #ece8df; font-size: 11px; }
+.photo-manager-post-head span { margin-left: auto; }
+.photo-manager-post-content { margin: 12px 0; max-height: 70px; overflow: auto; white-space: pre-wrap; font-size: 11px; line-height: 1.6; }
+.photo-manager-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.photo-manager-card { display: grid; gap: 7px; padding: 9px; border: 1px solid #e5e0d8; border-radius: 8px; }
+.photo-manager-card img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 5px; background: #eeeae2; }
+.photo-manager-select { font-size: 10px; }
+.photo-manager-card select, .photo-manager-card button { min-height: 31px; width: 100%; }
+
+/* 동영상 상세 정보는 사진 상세창과 같은 일반 텍스트 메타 형식 */
+.video-modal-info .modal-meta { display: block; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.video-detail-editor { display: grid; gap: 10px; margin: 14px 0; }
+.video-detail-editor label { display: grid; gap: 5px; font-size: 10px; }
+.video-detail-editor input, .video-detail-editor select { width: 100%; min-height: 32px; }
+.video-detail-editor-actions, .video-admin-actions { display: flex; gap: 7px; margin-top: 8px; }
+.video-modal-info .modal-tags .tag { border: 0; border-radius: 0; padding: 0; background: transparent; color: inherit; text-decoration: underline; cursor: pointer; }
+
+@media (max-width: 700px) {
+  .photo-manager-page { width: calc(100% - 20px); margin-top: 12px; }
+  .photo-manager-header { flex-direction: column; }
+  .photo-manager-toolbar { align-items: stretch; flex-direction: column; }
+  .photo-manager-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.admin-photo-manager-entry {
+  position: fixed;
+  top: 118px;
+  right: 28px;
+  z-index: 100;
+}
+
+.admin-photo-manager-entry button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid #bdb7ad;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #55514a;
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(70, 65, 55, 0.1);
+}
+
+.admin-photo-manager-entry button:hover {
+  border-color: #55514a;
+  background: #55514a;
+  color: #ffffff;
+}
+
+/* 업로드 사진 관리: 아카이브 가져오기와 같은 카드 UI */
+.photo-manager-page { width: min(1100px, calc(100% - 48px)) !important; }
+.photo-manager-month-toolbar,
+.photo-manager-bulk-bar { display: flex; align-items: end; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
+.photo-manager-month-toolbar label { display: grid; gap: 4px; font-size: 10px; text-align: left; }
+.photo-manager-month-toolbar input,
+.photo-manager-month-toolbar button,
+.photo-manager-bulk-bar select,
+.photo-manager-bulk-bar button { min-height: 34px; }
+.photo-manager-bulk-bar { padding-top: 14px; border-top: 1px solid #e8e2d9; }
+.photo-manager-bulk-bar > span { margin-right: auto; font-size: 11px; }
+.photo-manager-post-list { margin-top: 16px; }
+.photo-manager-content { max-width: 680px; max-height: 48px; margin-top: 6px; overflow: hidden; white-space: pre-wrap; }
+.photo-manager-post-select,
+.photo-manager-photo-select { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; }
+.photo-manager-page input[type="checkbox"] {
+  width: 13px !important;
+  min-width: 13px !important;
+  height: 13px !important;
+  min-height: 13px !important;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 13px;
+}
+.photo-manager-page .archive-import-media-info { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.photo-manager-page .archive-import-media-info > input,
+.photo-manager-page .archive-import-media-info > button,
+.photo-manager-page .archive-import-media-info > .import-visible-toggle { grid-column: 1 / -1; }
+.photo-manager-page .archive-import-media-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+/* 포토매니저 미디어 행은 ArchiveImport의 원본 배치를 그대로 사용 */
+.photo-manager-page .archive-import-media {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 14px;
+  padding: 10px;
+}
+.photo-manager-page .archive-import-media-preview {
+  width: 112px;
+  height: 112px;
+}
+.photo-manager-page .archive-import-media-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+.photo-manager-page .archive-import-media-info > * {
+  grid-column: auto;
+}
+.photo-manager-page .archive-import-media-info > select {
+  width: 100%;
+  max-width: 180px;
+}
+.photo-manager-page .archive-import-media-info > input,
+.photo-manager-page .archive-import-media-info > button,
+.photo-manager-page .archive-import-media-info > .import-visible-toggle {
+  grid-column: auto;
+}
+
+@media (max-width: 700px) {
+  .photo-manager-month-toolbar,
+  .photo-manager-bulk-bar { align-items: stretch; flex-direction: column; }
+  .photo-manager-page .archive-import-media-info { grid-template-columns: 1fr; }
+  .photo-manager-page .archive-import-media-info > * { grid-column: 1 !important; }
+}
+
+@media (max-width: 700px) {
+  .admin-photo-manager-entry {
+    top: 72px;
+    right: 12px;
+  }
+}
+.archive-draft-pagination {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  font-size: 10px;
+}
+
+.archive-draft-pagination button {
+  min-height: 30px;
+  padding: 0 9px;
+}

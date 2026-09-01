@@ -6,6 +6,7 @@ import "./App.css";
 
 function Archive({ isAdmin = false }) {
   const [photoType, setPhotoType] = useState("전체");
+  const [hairColorFilter, setHairColorFilter] = useState("전체");
   const [search, setSearch] = useState("");
   const [photos, setPhotos] = useState([]);
 
@@ -696,6 +697,10 @@ async function getPhotoPost(photo) {
           photoType === "전체" ||
           photo.type === photoType;
 
+        const matchesHairColorFilter =
+          hairColorFilter === "전체" ||
+          photo.hair_color === hairColorFilter;
+
         // =========================
         // 시작 날짜
         // =========================
@@ -719,6 +724,7 @@ async function getPhotoPost(photo) {
         if (!keyword) {
           return (
             matchesType &&
+            matchesHairColorFilter &&
             matchesStartDate &&
             matchesEndDate
           );
@@ -916,6 +922,7 @@ async function getPhotoPost(photo) {
 
         return (
           matchesType &&
+          matchesHairColorFilter &&
           matchesStartDate &&
           matchesEndDate &&
           matchesSearch
@@ -989,9 +996,18 @@ async function getPhotoPost(photo) {
           endDate={endDate}
           setEndDate={setEndDate}
           typeLabel="사진 유형"
-          allActive={photoType === "전체" && search.trim() === ""}
+          secondaryValue={hairColorFilter}
+          setSecondaryValue={setHairColorFilter}
+          secondaryLabel="머리색"
+          secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머"]}
+          allActive={
+            photoType === "전체" &&
+            hairColorFilter === "전체" &&
+            search.trim() === ""
+          }
           onAllClick={() => {
             setPhotoType("전체");
+            setHairColorFilter("전체");
             setSearch("");
           }}
         />

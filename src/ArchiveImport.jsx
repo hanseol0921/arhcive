@@ -1,8 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
@@ -10,8 +6,7 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { supabase } from "./supabaseClient";
 import "./App.css";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  pdfWorker;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 function ArchiveImport() {
   // 불러온 게시글 초안
@@ -161,7 +156,11 @@ function ArchiveImport() {
           const escaped = source[index++] || "";
           if (/[0-7]/.test(escaped)) {
             let octal = escaped;
-            for (let count = 0; count < 2 && /[0-7]/.test(source[index] || ""); count += 1) {
+            for (
+              let count = 0;
+              count < 2 && /[0-7]/.test(source[index] || "");
+              count += 1
+            ) {
               octal += source[index++];
             }
             bytes.push(Number.parseInt(octal, 8));
@@ -171,7 +170,8 @@ function ArchiveImport() {
           else if (escaped === "b") bytes.push(8);
           else if (escaped === "f") bytes.push(12);
           else if (escaped === "\r" && source[index] === "\n") index += 1;
-          else if (escaped !== "\r" && escaped !== "\n") bytes.push(escaped.charCodeAt(0));
+          else if (escaped !== "\r" && escaped !== "\n")
+            bytes.push(escaped.charCodeAt(0));
         } else if (char === "(") {
           depth += 1;
           bytes.push(char.charCodeAt(0));
@@ -280,7 +280,9 @@ function ArchiveImport() {
       for (const item of textItems) {
         const x = Number(item.transform[4]) || 0;
         const y = Number(item.transform[5]) || 0;
-        const height = Math.abs(Number(item.height) || Number(item.transform[3]) || 0);
+        const height = Math.abs(
+          Number(item.height) || Number(item.transform[3]) || 0,
+        );
         const tolerance = Math.max(2, height * 0.3);
 
         // PDF.js의 명시적 줄 끝 또는 Y좌표 변화 모두 줄바꿈으로 처리
@@ -331,7 +333,11 @@ function ArchiveImport() {
         if (index > 0) {
           const previousLine = lines[index - 1];
           const verticalGap = Math.abs(previousLine.y - line.y);
-          const normalLineHeight = Math.max(previousLine.height, line.height, 1);
+          const normalLineHeight = Math.max(
+            previousLine.height,
+            line.height,
+            1,
+          );
 
           // PDF의 줄 간격만큼 빈 줄 개수도 그대로 복원
           const missingLineCount = Math.max(
@@ -339,7 +345,11 @@ function ArchiveImport() {
             Math.round(verticalGap / normalLineHeight) - 1,
           );
 
-          for (let blankIndex = 0; blankIndex < missingLineCount; blankIndex++) {
+          for (
+            let blankIndex = 0;
+            blankIndex < missingLineCount;
+            blankIndex++
+          ) {
             pageParts.push("");
           }
         }

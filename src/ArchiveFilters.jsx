@@ -1,18 +1,21 @@
 function ArchiveFilters({
   type,
   setType,
-
   sortOrder,
   setSortOrder,
-
   startDate,
   setStartDate,
-
   endDate,
   setEndDate,
-
   typeLabel = "유형",
-
+  secondaryValue = "전체",
+  setSecondaryValue,
+  secondaryLabel = "",
+  secondaryOptions = [],
+  tertiaryValue = "전체",
+  setTertiaryValue,
+  tertiaryLabel = "",
+  tertiaryOptions = [],
   allActive = false,
   onAllClick,
 }) {
@@ -28,33 +31,53 @@ function ArchiveFilters({
 
       <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
         <option value="최신순">최신순</option>
-
         <option value="오래된순">오래된순</option>
       </select>
 
       <select value={type} onChange={(e) => setType(e.target.value)}>
         <option value="전체">{typeLabel}</option>
-
         <option value="셀카">셀카</option>
-
         <option value="남찍사">남찍사</option>
-
         <option value="거울셀카">거울셀카</option>
-
         <option value="그외">그외</option>
       </select>
 
+      {setSecondaryValue && secondaryOptions.length > 0 && (
+        <select
+          value={secondaryValue}
+          onChange={(e) => setSecondaryValue(e.target.value)}
+        >
+          <option value="전체">{secondaryLabel}</option>
+          {secondaryOptions.map((option) => (
+            <option value={option} key={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {setTertiaryValue && tertiaryOptions.length > 0 && (
+        <select
+          value={tertiaryValue}
+          onChange={(e) => setTertiaryValue(e.target.value)}
+        >
+          <option value="전체">{tertiaryLabel}</option>
+          {tertiaryOptions.map((option) => (
+            <option value={option} key={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      )}
+
       <div className="date-filter">
         <span>since</span>
-
         <input
           type="date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
         />
-
         <span>until</span>
-
         <input
           type="date"
           value={endDate}
