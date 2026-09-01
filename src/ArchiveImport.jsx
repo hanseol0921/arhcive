@@ -1006,6 +1006,26 @@ function ArchiveImport() {
   // 가져온 게시글 초안 삭제
   // =========================
 
+  function releaseDraftPreviewUrls(draft) {
+    const releasedUrls = new Set();
+
+    draft.media.forEach((item) => {
+      if (item.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl);
+        releasedUrls.add(item.previewUrl);
+      }
+
+      if (item.thumbnailPreviewUrl) {
+        URL.revokeObjectURL(item.thumbnailPreviewUrl);
+        releasedUrls.add(item.thumbnailPreviewUrl);
+      }
+    });
+
+    objectUrlsRef.current = objectUrlsRef.current.filter(
+      (url) => !releasedUrls.has(url),
+    );
+  }
+
   function removeDraft(draftId) {
     const draft = drafts.find((item) => item.id === draftId);
 
@@ -1017,16 +1037,7 @@ function ArchiveImport() {
 
     if (!ok) return;
 
-    // 만들어 둔 미리보기 URL 정리
-    draft.media.forEach((item) => {
-      if (item.previewUrl) {
-        URL.revokeObjectURL(item.previewUrl);
-      }
-
-      if (item.thumbnailPreviewUrl) {
-        URL.revokeObjectURL(item.thumbnailPreviewUrl);
-      }
-    });
+    releaseDraftPreviewUrls(draft);
 
     setDrafts((prev) => prev.filter((item) => item.id !== draftId));
   }
@@ -1461,18 +1472,8 @@ function ArchiveImport() {
       // 완료
       // =========================
 
-      setDrafts((prev) =>
-        prev.map((item) =>
-          item.id === draftId
-            ? {
-                ...item,
-                status: "uploaded",
-                uploadedPostId: createdPostId,
-                error: "",
-              }
-            : item,
-        ),
-      );
+      releaseDraftPreviewUrls(draft);
+      setDrafts((prev) => prev.filter((item) => item.id !== draftId));
 
       return true;
     } catch (error) {
@@ -1744,7 +1745,8 @@ function ArchiveImport() {
               <option value="금발">금발</option>
               <option value="적발">적발</option>
               <option value="은발">은발</option>
-              <option value="핑크">핑크</option>
+              <option value="핑머">핑머</option>
+              <option value="주머">주머</option>
             </select>
 
             <button
@@ -1955,7 +1957,8 @@ function ArchiveImport() {
                           <option value="금발">금발</option>
                           <option value="적발">적발</option>
                           <option value="은발">은발</option>
-                          <option value="핑크">핑크</option>
+                          <option value="핑머">핑머</option>
+                          <option value="주머">주머</option>
                         </select>
 
                         <label className="archive-visible-toggle import-visible-toggle">

@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
 import "./App.css";
+import "./PhotoLightbox.css";
 
-const HAIR_COLORS = ["흑발", "갈발", "금발", "적발", "은발", "핑머"];
+const HAIR_COLORS = ["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머"];
 const PHOTO_TYPES = ["셀카", "남찍사", "거울셀카", "그외"];
 const splitTags = (value) => value.split(",").map((tag) => tag.trim()).filter(Boolean);
 const monthStart = (month) => (month ? `${month}-01` : "");
@@ -25,6 +26,7 @@ function PhotoManager() {
   const [bulkSaving, setBulkSaving] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
   const [saveAllProgress, setSaveAllProgress] = useState("");
+  const [largePreview, setLargePreview] = useState(null);
 
   async function loadPhotos() {
     const startDate = monthStart(startMonth);
@@ -224,7 +226,18 @@ function PhotoManager() {
             <div className="archive-import-media-list">
               {group.photos.map((photo, index) => (
                 <div className="archive-import-media" key={photo.id}>
-                  <div className="archive-import-media-preview"><img src={photo.thumbnail_url || photo.image_url} alt="" /></div>
+                  <button
+                    type="button"
+                    className="archive-import-media-preview photo-preview-button"
+                    onClick={() => setLargePreview({
+                      src: photo.image_url || photo.thumbnail_url,
+                      name: `${group.post?.date || photo.date || ""} 사진 ${index + 1}`,
+                    })}
+                    aria-label={`${index + 1}번 사진 크게 보기`}
+                  >
+                    <img src={photo.thumbnail_url || photo.image_url} alt="" />
+                    <span>크게 보기</span>
+                  </button>
                   <div className="archive-import-media-info">
                     <strong>{index + 1}. 사진</strong>
                     <span>{photo.date || ""}</span>
@@ -249,6 +262,29 @@ function PhotoManager() {
           </section>
         ))}
       </div>
+      {largePreview && (
+        <div
+          className="photo-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label={largePreview.name}
+          onMouseDown={() => setLargePreview(null)}
+        >
+          <button
+            type="button"
+            className="photo-lightbox-close"
+            aria-label="큰 사진 닫기"
+            onClick={() => setLargePreview(null)}
+          >
+            ×
+          </button>
+          <img
+            src={largePreview.src}
+            alt={largePreview.name}
+            onMouseDown={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </main>
   );
 }

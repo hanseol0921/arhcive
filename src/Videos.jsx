@@ -394,7 +394,7 @@ function Videos({ isAdmin = false }) {
                   secondaryValue={videoHairColor}
                   setSecondaryValue={setVideoHairColor}
                   secondaryLabel="머리색"
-                  secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머"]}
+                  secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머"]}
                   tertiaryValue={videoTag}
                   setTertiaryValue={setVideoTag}
                   tertiaryLabel="동영상 태그"
@@ -631,6 +631,7 @@ function Videos({ isAdmin = false }) {
                               <option value="적발">적발</option>
                               <option value="은발">은발</option>
                               <option value="핑머">핑머</option>
+                              <option value="주머">주머</option>
                             </select>
                           </label>
                           <label>

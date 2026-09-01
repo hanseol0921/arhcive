@@ -129,21 +129,30 @@ async function getPhotoPost(photo) {
   }, []);
 
   async function getPhotos() {
-    const { data, error } = await supabase
-      .from("photos")
-      .select("*")
-      .order("date", { ascending: false })
-      .order("created_at", { ascending: true });
+    const pageSize = 1000;
+    const allPhotos = [];
 
-    if (error) {
-      console.error(
-        "사진을 불러오지 못했습니다:",
-        error
-      );
-      return;
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase
+        .from("photos")
+        .select("*")
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        console.error("사진을 불러오지 못했습니다:", error);
+        return;
+      }
+
+      allPhotos.push(...(data || []));
+
+      if (!data || data.length < pageSize) {
+        break;
+      }
     }
 
-    setPhotos(data || []);
+    setPhotos(allPhotos);
   }
 
   // =========================
@@ -667,7 +676,7 @@ async function getPhotoPost(photo) {
   // 검색 / 필터
   // =========================
 
-  const hairColorAliases = {
+const hairColorAliases = {
   흑발: ["검머", "검은머리", "검정머리", "블랙", "톤다운"],
   갈발: ["갈머", "갈색머리", "브라운", "염색"],
   금발: ["금머", "노란머리", "블론드", "탈색"],
@@ -676,6 +685,23 @@ async function getPhotoPost(photo) {
   핑머: ["핑크머리", "분홍머리", "염색"],
   주머: ["주황머리", "오렌지머리", "염색"],
 };
+
+  const postSortKeys = new Map();
+
+  photos.forEach((photo) => {
+    const postKey = photo.post_id || `photo-${photo.id}`;
+    const current = postSortKeys.get(postKey);
+    const uploadOrder = Number(photo.upload_order ?? 0);
+    const createdTime = new Date(photo.created_at || 0).getTime();
+
+    if (!current) {
+      postSortKeys.set(postKey, { uploadOrder, createdTime });
+      return;
+    }
+
+    current.uploadOrder = Math.min(current.uploadOrder, uploadOrder);
+    current.createdTime = Math.min(current.createdTime, createdTime);
+  });
 
   const filteredPhotos =
     photos
@@ -929,46 +955,42 @@ async function getPhotoPost(photo) {
         );
       })
       .sort((a, b) => {
-        // =========================
-        // 최신순
-        // 날짜가 최신인 사진부터
-        // 같은 날짜라면 나중에 업로드한 사진부터
-        // =========================
+        const aPostKey = a.post_id || `photo-${a.id}`;
+        const bPostKey = b.post_id || `photo-${b.id}`;
 
-        if (sortOrder === "최신순") {
-          const dateDiff =
-            new Date(b.date) -
-            new Date(a.date);
-
-          if (dateDiff !== 0) {
-            return dateDiff;
-          }
-
+        // 같은 게시글의 사진은 정렬 방향과 관계없이 원본 순서를 유지한다.
+        if (aPostKey === bPostKey) {
           return (
-            (b.upload_order ?? 0) -
-            (a.upload_order ?? 0)
+            Number(a.media_order ?? a.upload_order ?? 0) -
+            Number(b.media_order ?? b.upload_order ?? 0)
           );
         }
 
-
-        // =========================
-        // 오래된순
-        // 날짜가 오래된 사진부터
-        // 같은 날짜라면 먼저 업로드한 사진부터
-        // =========================
-
+        const aDate = new Date(a.date || 0).getTime();
+        const bDate = new Date(b.date || 0).getTime();
         const dateDiff =
-          new Date(a.date) -
-          new Date(b.date);
+          sortOrder === "최신순"
+            ? bDate - aDate
+            : aDate - bDate;
 
-        if (dateDiff !== 0) {
-          return dateDiff;
-        }
+        if (dateDiff !== 0) return dateDiff;
 
-        return (
-          (a.upload_order ?? 0) -
-          (b.upload_order ?? 0)
-              );
+        const aKey = postSortKeys.get(aPostKey) || {};
+        const bKey = postSortKeys.get(bPostKey) || {};
+        const orderDiff =
+          sortOrder === "최신순"
+            ? (bKey.uploadOrder ?? 0) - (aKey.uploadOrder ?? 0)
+            : (aKey.uploadOrder ?? 0) - (bKey.uploadOrder ?? 0);
+
+        if (orderDiff !== 0) return orderDiff;
+
+        const createdDiff =
+          sortOrder === "최신순"
+            ? (bKey.createdTime ?? 0) - (aKey.createdTime ?? 0)
+            : (aKey.createdTime ?? 0) - (bKey.createdTime ?? 0);
+
+        if (createdDiff !== 0) return createdDiff;
+        return String(aPostKey).localeCompare(String(bPostKey));
       });
 
   // =========================
@@ -999,7 +1021,7 @@ async function getPhotoPost(photo) {
           secondaryValue={hairColorFilter}
           setSecondaryValue={setHairColorFilter}
           secondaryLabel="머리색"
-          secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머"]}
+          secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머"]}
           allActive={
             photoType === "전체" &&
             hairColorFilter === "전체" &&
@@ -1260,6 +1282,7 @@ async function getPhotoPost(photo) {
                     <option value="은발">은발</option>
 
                     <option value="핑머">핑머</option>
+                    <option value="주머">주머</option>
                   </select>
 
                   {/* 태그 */}

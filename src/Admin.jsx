@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import "./Admin.css";
+import "./PhotoLightbox.css";
 
 function Admin() {
+  const [largePreview, setLargePreview] = useState(null);
+  const previewPointerStart = useRef(null);
   // =========================
   // 로그아웃
   // =========================
@@ -1563,12 +1566,13 @@ for (
                           ? "dragging"
                           : ""
                       }`}
-                      onMouseDown={(e) =>
-                        startCropDrag(
-                          e,
-                          photo
-                        )
-                      }
+                      onMouseDown={(e) => {
+                        previewPointerStart.current = {
+                          x: e.clientX,
+                          y: e.clientY,
+                        };
+                        startCropDrag(e, photo);
+                      }}
                       onMouseMove={(e) =>
                         moveCrop(
                           e,
@@ -1585,6 +1589,20 @@ for (
                           photo.id
                         )
                       }
+                      onClick={(e) => {
+                        const start = previewPointerStart.current;
+                        previewPointerStart.current = null;
+                        if (
+                          start &&
+                          Math.hypot(e.clientX - start.x, e.clientY - start.y) > 5
+                        ) {
+                          return;
+                        }
+                        setLargePreview({
+                          src: photo.previewUrl,
+                          name: photo.file?.name || "사진 미리보기",
+                        });
+                      }}
                     >
 
                       <img
@@ -1600,7 +1618,7 @@ for (
                       />
 
                       <div className="crop-help">
-                        드래그해서 위치 조절
+                        클릭해서 크게 보기 · 드래그해서 위치 조절
                       </div>
 
                     </div>
@@ -1827,6 +1845,30 @@ for (
         </button>
 
       </div>
+
+      {largePreview && (
+        <div
+          className="photo-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label={largePreview.name}
+          onMouseDown={() => setLargePreview(null)}
+        >
+          <button
+            type="button"
+            className="photo-lightbox-close"
+            aria-label="큰 사진 닫기"
+            onClick={() => setLargePreview(null)}
+          >
+            ×
+          </button>
+          <img
+            src={largePreview.src}
+            alt={largePreview.name}
+            onMouseDown={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
     </div>
   );
