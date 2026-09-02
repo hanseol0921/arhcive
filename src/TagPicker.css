@@ -1,0 +1,32 @@
+.tag-picker { position: relative; min-width: 0; }
+.tag-picker-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 38px; padding: 6px 8px; border: 1px solid #d8d2c8; border-radius: 6px; background: #fff; }
+.tag-picker-chips:focus-within { border-color: #81786b; box-shadow: 0 0 0 2px rgba(129,120,107,.12); }
+.tag-picker-chips input { flex: 1 1 120px; min-width: 90px; height: 24px !important; min-height: 24px !important; padding: 0 !important; border: 0 !important; outline: 0; background: transparent; box-shadow: none !important; }
+.tag-picker-chip { display: inline-flex; align-items: center; gap: 3px; padding: 4px 7px; border-radius: 999px; background: #eee9df; color: #514b43; font-size: 11px; line-height: 1; }
+.tag-picker-chip button { width: 16px !important; min-width: 16px !important; height: 16px !important; min-height: 16px !important; padding: 0 !important; border: 0; background: transparent; color: #796f62; font-size: 15px; line-height: 14px; }
+.tag-picker-menu { position: absolute; z-index: 120; top: calc(100% + 4px); left: 0; right: 0; max-height: 230px; overflow-y: auto; padding: 5px; border: 1px solid #d8d2c8; border-radius: 7px; background: #fff; box-shadow: 0 10px 28px rgba(43,38,31,.16); }
+.tag-picker-menu > button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 32px; padding: 7px 9px; border: 0; border-radius: 4px; background: transparent; text-align: left; }
+.tag-picker-menu > button:hover { background: #f3efe7; }
+.tag-picker-menu small { overflow: hidden; color: #9a9185; text-overflow: ellipsis; white-space: nowrap; }
+.tag-picker-menu .tag-picker-create { color: #8b5f45; border-top: 1px solid #eee8df; border-radius: 0; }
+
+.tag-manager-page { width: min(980px, calc(100% - 40px)); margin: 38px auto 80px; color: #55514a; }
+.tag-manager-page > header { display: flex; align-items: flex-start; gap: 18px; margin-bottom: 20px; }
+.tag-manager-page h1 { margin: 0 0 5px; font-size: 30px; font-weight: 500; }
+.tag-manager-page p { margin: 0; font-size: 12px; }
+.tag-manager-create, .tag-manager-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 14px; border: 1px solid #ddd7cd; background: #fff; }
+.tag-manager-create { margin-bottom: 16px; border-radius: 10px; }
+.tag-manager-search { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.tag-manager-search input { flex: 1; min-height: 38px; padding: 8px 11px; border: 1px solid #d8d2c8; border-radius: 6px; background: #fff; }
+.tag-manager-search span { min-width: 70px; color: #8b8378; font-size: 10px; text-align: right; }
+.tag-manager-empty { padding: 36px 12px; border: 1px dashed #d8d2c8; border-radius: 8px; text-align: center; }
+.tag-manager-save-bar { position: sticky; z-index: 20; top: 0; display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 10px 12px; border: 1px solid #d7d0c5; border-radius: 8px; background: rgba(250,248,243,.96); box-shadow: 0 5px 18px rgba(50,43,34,.08); }
+.tag-manager-save-bar span { margin-right: auto; font-size: 11px; }
+.tag-manager-save-bar button { min-height: 34px; }
+.tag-manager-list { display: grid; gap: 8px; }
+.tag-manager-row { grid-template-columns: minmax(150px, .7fr) minmax(260px, 1.5fr) auto; align-items: end; border-radius: 8px; transition: border-color .2s, background .2s, box-shadow .2s; }
+.tag-manager-row label { display: grid; gap: 5px; font-size: 10px; }
+.tag-manager-row input, .tag-manager-create input { min-height: 36px; padding: 7px 9px; border: 1px solid #d8d2c8; border-radius: 5px; }
+.tag-manager-row.duplicate-highlight { border-color: #b86a5d; background: #fff7f3; box-shadow: 0 0 0 3px rgba(184,106,93,.16); }
+.tag-manager-delete { min-height: 36px; border-color: #d9a9a2 !important; color: #a64f43; background: #fff !important; }
+@media (max-width: 700px) { .tag-manager-row { grid-template-columns: 1fr; } }

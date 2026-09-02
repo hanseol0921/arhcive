@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
 import "./App.css";
 import "./PhotoLightbox.css";
+import TagPicker from "./TagPicker";
 
-const HAIR_COLORS = ["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머", "와인"];
+const HAIR_COLORS = ["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머", "와인색"];
 const PHOTO_TYPES = ["셀카", "남찍사", "거울셀카", "그외"];
 const splitTags = (value) => value.split(",").map((tag) => tag.trim()).filter(Boolean);
 const monthStart = (month) => (month ? `${month}-01` : "");
@@ -251,8 +252,8 @@ function PhotoManager() {
                     <label className="archive-visible-toggle import-visible-toggle">
                       <input type="checkbox" checked={photo.archive_visible !== false} onChange={(e) => updatePhoto(photo.id, "archive_visible", e.target.checked)} />사진 아카이브에 표시
                     </label>
-                    <input type="text" placeholder="태그 (쉼표로 구분)" value={photo.tagsText} onChange={(e) => updatePhoto(photo.id, "tagsText", e.target.value)} />
-                    <input type="text" placeholder="검색 태그 (쉼표로 구분)" value={photo.searchTagsText} onChange={(e) => updatePhoto(photo.id, "searchTagsText", e.target.value)} />
+                    <TagPicker value={photo.tagsText} onChange={(value) => updatePhoto(photo.id, "tagsText", value)} />
+                    <small>검색용 태그는 태그 관리에서 일괄 수정됩니다.</small>
                     <input type="url" placeholder="위버스 링크" value={photo.weverse_url || ""} onChange={(e) => updatePhoto(photo.id, "weverse_url", e.target.value)} />
                     <button type="button" onClick={() => savePhoto(photo)} disabled={savingIds.includes(photo.id)}>{savingIds.includes(photo.id) ? "저장 중..." : "이 사진 설정 저장"}</button>
                   </div>

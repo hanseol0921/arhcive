@@ -5,6 +5,7 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 import { supabase } from "./supabaseClient";
 import "./App.css";
+import TagPicker from "./TagPicker";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -1747,6 +1748,7 @@ function ArchiveImport() {
               <option value="은발">은발</option>
               <option value="핑머">핑머</option>
               <option value="주머">주머</option>
+              <option value="와인색">와인색</option>
             </select>
 
             <button
@@ -1959,7 +1961,7 @@ function ArchiveImport() {
                           <option value="은발">은발</option>
                           <option value="핑머">핑머</option>
                           <option value="주머">주머</option>
-                          <option value="와인">와인</option>
+                          <option value="와인색">와인색</option>
                         </select>
 
                         <label className="archive-visible-toggle import-visible-toggle">
@@ -1979,35 +1981,9 @@ function ArchiveImport() {
                           사진 아카이브에 표시
                         </label>
 
-                        <input
-                          type="text"
-                          placeholder="태그 (쉼표로 구분)"
-                          value={item.tags}
-                          disabled={draft.status === "uploaded"}
-                          onChange={(e) =>
-                            updateMedia(
-                              draft.id,
-                              item.id,
-                              "tags",
-                              e.target.value,
-                            )
-                          }
-                        />
+                        <TagPicker value={item.tags} disabled={draft.status === "uploaded"} onChange={(value) => updateMedia(draft.id, item.id, "tags", value)} />
 
-                        <input
-                          type="text"
-                          placeholder="검색 태그 (쉼표로 구분)"
-                          value={item.searchTags}
-                          disabled={draft.status === "uploaded"}
-                          onChange={(e) =>
-                            updateMedia(
-                              draft.id,
-                              item.id,
-                              "searchTags",
-                              e.target.value,
-                            )
-                          }
-                        />
+                        <small>검색용 태그는 태그 관리에서 일괄 수정됩니다.</small>
                       </>
                     )}
 

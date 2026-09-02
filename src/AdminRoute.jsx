@@ -6,6 +6,7 @@ import Videos from "./Videos";
 import Posts from "./Posts";
 import ArchiveImport from "./ArchiveImport";
 import PhotoManager from "./PhotoManager";
+import TagManager from "./TagManager";
 
 function AdminRoute() {
   const [session, setSession] = useState(null);
@@ -40,6 +41,7 @@ function AdminRoute() {
   if (path === "/admin/videos") return <Videos isAdmin={true} />;
   if (path === "/admin/posts") return <Posts isAdmin={true} />;
   if (path === "/admin/photos/manage") return <PhotoManager />;
+  if (path === "/admin/tags") return <TagManager />;
   return <AdminHome />;
 }
 

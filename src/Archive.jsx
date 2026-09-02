@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 import ArchiveLayout from "./ArchiveLayout";
 import ArchiveFilters from "./ArchiveFilters";
 import "./App.css";
+import TagPicker from "./TagPicker";
 
 function Archive({ isAdmin = false }) {
   const [photoType, setPhotoType] = useState("전체");
@@ -684,6 +685,7 @@ const hairColorAliases = {
   은발: ["백발", "실버", "하얀머리", "탈색"],
   핑머: ["핑크머리", "분홍머리", "염색"],
   주머: ["주황머리", "오렌지머리", "염색"],
+  와인색: ["와인머리", "버건디", "버건디머리", "염색"],
 };
 
   const postSortKeys = new Map();
@@ -1021,15 +1023,7 @@ const hairColorAliases = {
           secondaryValue={hairColorFilter}
           setSecondaryValue={setHairColorFilter}
           secondaryLabel="머리색"
-          secondaryOptions={[
-            "흑발",
-            "갈발",
-            "금발",
-            "적발",
-            "은발",
-            "핑머",
-            "주머",
-          ]}
+          secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머", "와인색"]}
           allActive={
             photoType === "전체" &&
             hairColorFilter === "전체" &&
@@ -1291,32 +1285,19 @@ const hairColorAliases = {
 
                     <option value="핑머">핑머</option>
                     <option value="주머">주머</option>
-                    <option value="와인">와인</option>
+                    <option value="와인색">와인색</option>
                   </select>
 
                   {/* 태그 */}
 
                   <label>태그</label>
 
-                  <input
-                    type="text"
-                    value={editTags}
-                    onChange={(e) => setEditTags(e.target.value)}
-                  />
+                  <TagPicker value={editTags} onChange={setEditTags} />
 
                   {/* 검색용 태그 */}
 
-                  <label>검색용 태그</label>
-
-                  <input
-                    type="text"
-                    placeholder="오알럽, 빵모자, 모자"
-                    value={editSearchTags}
-                    onChange={(e) => setEditSearchTags(e.target.value)}
-                  />
-
                   <div className="input-help">
-                    검색할 때만 사용되며 사진에는 표시되지 않습니다.
+                    검색용 태그는 관리자 태그 사전에서 한 번만 관리합니다.
                   </div>
 
                   {/* 위버스 */}

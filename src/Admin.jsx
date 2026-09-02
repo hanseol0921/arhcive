@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import "./Admin.css";
 import "./PhotoLightbox.css";
+import TagPicker from "./TagPicker";
 
 function Admin() {
   const [largePreview, setLargePreview] = useState(null);
@@ -1283,27 +1284,9 @@ for (
                 }
               />
 
-              <input
-                type="text"
-                placeholder="태그"
-                value={bulkTags}
-                onChange={(e) =>
-                  setBulkTags(
-                    e.target.value
-                  )
-                }
-              />
+              <TagPicker value={bulkTags} onChange={setBulkTags} placeholder="일괄 적용할 태그" />
 
-              <input
-                type="text"
-                placeholder="검색용 태그"
-                value={bulkSearchTags}
-                onChange={(e) =>
-                  setBulkSearchTags(
-                    e.target.value
-                  )
-                }
-              />
+              <small>검색용 태그는 태그 관리에서 설정</small>
 
               <input
                 type="url"
@@ -1421,35 +1404,10 @@ for (
 
             <div className="mini-field">
               <label>태그</label>
-              <input
-                type="text"
-                placeholder="쉼표로 구분"
-                value={video.tags}
-                onChange={(e) =>
-                  updateVideo(
-                    video.id,
-                    "tags",
-                    e.target.value
-                  )
-                }
-              />
+              <TagPicker value={video.tags} onChange={(value) => updateVideo(video.id, "tags", value)} />
             </div>
 
-            <div className="mini-field">
-              <label>검색용 태그</label>
-              <input
-                type="text"
-                placeholder="쉼표로 구분"
-                value={video.searchTags}
-                onChange={(e) =>
-                  updateVideo(
-                    video.id,
-                    "searchTags",
-                    e.target.value
-                  )
-                }
-              />
-            </div>
+            <div className="mini-field"><small>검색용 태그는 태그 관리에서 설정</small></div>
 
           </div>
 
@@ -1726,45 +1684,11 @@ for (
                           태그
                         </label>
 
-                        <input
-                          type="text"
-                          placeholder="공항, 모자"
-                          value={
-                            photo.tags
-                          }
-                          onChange={(e) =>
-                            updatePhoto(
-                              photo.id,
-                              "tags",
-                              e.target.value
-                            )
-                          }
-                        />
+                        <TagPicker value={photo.tags} onChange={(value) => updatePhoto(photo.id, "tags", value)} />
 
                       </div>
 
-                      <div className="mini-field">
-
-                        <label>
-                          검색용 태그
-                        </label>
-
-                        <input
-                          type="text"
-                          placeholder="오알럽, 모자"
-                          value={
-                            photo.searchTags
-                          }
-                          onChange={(e) =>
-                            updatePhoto(
-                              photo.id,
-                              "searchTags",
-                              e.target.value
-                            )
-                          }
-                        />
-
-                      </div>
+                      <div className="mini-field"><small>검색용 태그는 태그 관리에서 설정</small></div>
 
                       <div className="mini-field">
 

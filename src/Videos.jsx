@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 import ArchiveLayout from "./ArchiveLayout";
 import ArchiveFilters from "./ArchiveFilters";
 import "./App.css";
+import TagPicker from "./TagPicker";
 
 function Videos({ isAdmin = false }) {
   const [videos, setVideos] = useState([]);
@@ -394,16 +395,7 @@ function Videos({ isAdmin = false }) {
                   secondaryValue={videoHairColor}
                   setSecondaryValue={setVideoHairColor}
                   secondaryLabel="머리색"
-                  secondaryOptions={[
-                    "흑발",
-                    "갈발",
-                    "금발",
-                    "적발",
-                    "은발",
-                    "핑머",
-                    "주머",
-                    "와인",
-                  ]}
+                  secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머", "와인색"]}
                   tertiaryValue={videoTag}
                   setTertiaryValue={setVideoTag}
                   tertiaryLabel="동영상 태그"
@@ -453,7 +445,7 @@ function Videos({ isAdmin = false }) {
                               onLoadedMetadata={(event) =>
                                 showThumbnailFrame(
                                   event.currentTarget,
-                                  video.thumbnail_time,
+                                  video.thumbnail_time
                                 )
                               }
                             />
@@ -544,10 +536,7 @@ function Videos({ isAdmin = false }) {
                         playsInline
                         onLoadedMetadata={(event) => {
                           setVideoDuration(event.currentTarget.duration || 0);
-                          showThumbnailFrame(
-                            event.currentTarget,
-                            thumbnailTime,
-                          );
+                          showThumbnailFrame(event.currentTarget, thumbnailTime);
                         }}
                       />
                     </div>
@@ -595,10 +584,7 @@ function Videos({ isAdmin = false }) {
                         <div className="modal-meta">
                           {selectedVideo.type}
                           {selectedVideo.hair_color && (
-                            <>
-                              <span>{" · "}</span>
-                              {selectedVideo.hair_color}
-                            </>
+                            <><span>{" · "}</span>{selectedVideo.hair_color}</>
                           )}
                         </div>
                       )}
@@ -637,9 +623,7 @@ function Videos({ isAdmin = false }) {
                             머리색
                             <select
                               value={editVideoHairColor}
-                              onChange={(e) =>
-                                setEditVideoHairColor(e.target.value)
-                              }
+                              onChange={(e) => setEditVideoHairColor(e.target.value)}
                             >
                               <option value="">머리색 선택</option>
                               <option value="흑발">흑발</option>
@@ -649,27 +633,14 @@ function Videos({ isAdmin = false }) {
                               <option value="은발">은발</option>
                               <option value="핑머">핑머</option>
                               <option value="주머">주머</option>
-                              <option value="와인">와인</option>
+                              <option value="와인색">와인색</option>
                             </select>
                           </label>
                           <label>
                             태그
-                            <input
-                              value={editVideoTags}
-                              onChange={(e) => setEditVideoTags(e.target.value)}
-                              placeholder="쉼표로 구분"
-                            />
+                            <TagPicker value={editVideoTags} onChange={setEditVideoTags} />
                           </label>
-                          <label>
-                            검색 태그
-                            <input
-                              value={editVideoSearchTags}
-                              onChange={(e) =>
-                                setEditVideoSearchTags(e.target.value)
-                              }
-                              placeholder="쉼표로 구분"
-                            />
-                          </label>
+                          <div className="input-help">검색용 태그는 관리자 태그 사전에서 관리합니다.</div>
                           <div className="video-detail-editor-actions">
                             <button
                               type="button"
@@ -691,10 +662,7 @@ function Videos({ isAdmin = false }) {
 
                       {isAdmin && !editingVideo && (
                         <div className="video-admin-actions">
-                          <button
-                            type="button"
-                            onClick={() => setEditingVideo(true)}
-                          >
+                          <button type="button" onClick={() => setEditingVideo(true)}>
                             수정
                           </button>
                           <button type="button" onClick={deleteSelectedVideo}>
