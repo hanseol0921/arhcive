@@ -1021,7 +1021,15 @@ const hairColorAliases = {
           secondaryValue={hairColorFilter}
           setSecondaryValue={setHairColorFilter}
           secondaryLabel="머리색"
-          secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머"]}
+          secondaryOptions={[
+            "흑발",
+            "갈발",
+            "금발",
+            "적발",
+            "은발",
+            "핑머",
+            "주머",
+          ]}
           allActive={
             photoType === "전체" &&
             hairColorFilter === "전체" &&
@@ -1283,6 +1291,7 @@ const hairColorAliases = {
 
                     <option value="핑머">핑머</option>
                     <option value="주머">주머</option>
+                    <option value="와인">와인</option>
                   </select>
 
                   {/* 태그 */}

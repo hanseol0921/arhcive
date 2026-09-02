@@ -3,7 +3,7 @@ import { supabase } from "./supabaseClient";
 import "./App.css";
 import "./PhotoLightbox.css";
 
-const HAIR_COLORS = ["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머"];
+const HAIR_COLORS = ["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머", "와인"];
 const PHOTO_TYPES = ["셀카", "남찍사", "거울셀카", "그외"];
 const splitTags = (value) => value.split(",").map((tag) => tag.trim()).filter(Boolean);
 const monthStart = (month) => (month ? `${month}-01` : "");

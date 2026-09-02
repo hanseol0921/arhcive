@@ -1959,6 +1959,7 @@ function ArchiveImport() {
                           <option value="은발">은발</option>
                           <option value="핑머">핑머</option>
                           <option value="주머">주머</option>
+                          <option value="와인">와인</option>
                         </select>
 
                         <label className="archive-visible-toggle import-visible-toggle">

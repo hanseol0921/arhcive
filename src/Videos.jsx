@@ -394,7 +394,16 @@ function Videos({ isAdmin = false }) {
                   secondaryValue={videoHairColor}
                   setSecondaryValue={setVideoHairColor}
                   secondaryLabel="머리색"
-                  secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머"]}
+                  secondaryOptions={[
+                    "흑발",
+                    "갈발",
+                    "금발",
+                    "적발",
+                    "은발",
+                    "핑머",
+                    "주머",
+                    "와인",
+                  ]}
                   tertiaryValue={videoTag}
                   setTertiaryValue={setVideoTag}
                   tertiaryLabel="동영상 태그"
@@ -444,7 +453,7 @@ function Videos({ isAdmin = false }) {
                               onLoadedMetadata={(event) =>
                                 showThumbnailFrame(
                                   event.currentTarget,
-                                  video.thumbnail_time
+                                  video.thumbnail_time,
                                 )
                               }
                             />
@@ -535,7 +544,10 @@ function Videos({ isAdmin = false }) {
                         playsInline
                         onLoadedMetadata={(event) => {
                           setVideoDuration(event.currentTarget.duration || 0);
-                          showThumbnailFrame(event.currentTarget, thumbnailTime);
+                          showThumbnailFrame(
+                            event.currentTarget,
+                            thumbnailTime,
+                          );
                         }}
                       />
                     </div>
@@ -583,7 +595,10 @@ function Videos({ isAdmin = false }) {
                         <div className="modal-meta">
                           {selectedVideo.type}
                           {selectedVideo.hair_color && (
-                            <><span>{" · "}</span>{selectedVideo.hair_color}</>
+                            <>
+                              <span>{" · "}</span>
+                              {selectedVideo.hair_color}
+                            </>
                           )}
                         </div>
                       )}
@@ -622,7 +637,9 @@ function Videos({ isAdmin = false }) {
                             머리색
                             <select
                               value={editVideoHairColor}
-                              onChange={(e) => setEditVideoHairColor(e.target.value)}
+                              onChange={(e) =>
+                                setEditVideoHairColor(e.target.value)
+                              }
                             >
                               <option value="">머리색 선택</option>
                               <option value="흑발">흑발</option>
@@ -632,6 +649,7 @@ function Videos({ isAdmin = false }) {
                               <option value="은발">은발</option>
                               <option value="핑머">핑머</option>
                               <option value="주머">주머</option>
+                              <option value="와인">와인</option>
                             </select>
                           </label>
                           <label>
@@ -673,7 +691,10 @@ function Videos({ isAdmin = false }) {
 
                       {isAdmin && !editingVideo && (
                         <div className="video-admin-actions">
-                          <button type="button" onClick={() => setEditingVideo(true)}>
+                          <button
+                            type="button"
+                            onClick={() => setEditingVideo(true)}
+                          >
                             수정
                           </button>
                           <button type="button" onClick={deleteSelectedVideo}>
