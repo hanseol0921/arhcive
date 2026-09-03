@@ -31,6 +31,10 @@ select {
   font-family: inherit;
 }
 
+.mobile-tab-search {
+  display: none;
+}
+
 
 /* =========================
    전체 페이지
@@ -480,7 +484,7 @@ select {
 
   align-content: start;
 
-  gap: 1px;
+  gap: 2px;
 
   /*
     ★★★★★★★★★★★★★★
@@ -4517,10 +4521,11 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
   .archive-side-tabs {
     position: absolute !important;
     top: -35px !important;
-    left: 8px !important;
-    right: auto !important;
-    width: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
     margin: 0 !important;
+    padding: 0 8px !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: flex-end !important;
@@ -4528,8 +4533,8 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
   }
 
   .archive-side-tab {
-    width: 66px !important;
-    min-width: 66px !important;
+    width: 54px !important;
+    min-width: 54px !important;
     height: 35px !important;
     flex: none !important;
     border: 1px solid #d9d9d9 !important;
@@ -4542,6 +4547,39 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
     height: 38px !important;
     background: #ffffff !important;
     color: #55514a !important;
+  }
+
+  .top > .search-box {
+    display: none !important;
+  }
+
+  .mobile-tab-search {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    align-self: center;
+    min-width: 0;
+    height: 30px;
+    margin-left: 5px;
+    border: 1px solid #55514a;
+    background: #fff;
+  }
+
+  .mobile-tab-search span {
+    flex: 0 0 auto;
+    padding-left: 7px;
+    font-size: 15px;
+  }
+
+  .mobile-tab-search input {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    padding: 4px 7px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-size: 11px;
   }
 
   .post-bulk-actions {

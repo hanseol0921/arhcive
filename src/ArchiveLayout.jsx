@@ -451,6 +451,16 @@ function ArchiveLayout({
                   게시글
                 </button>
               )}
+
+              <div className="mobile-tab-search">
+                <span>⌕</span>
+                <input
+                  type="text"
+                  placeholder={searchPlaceholder}
+                  value={search}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                />
+              </div>
             </div>
 
             {/* =========================
@@ -466,4 +476,3 @@ function ArchiveLayout({
 }
 
 export default ArchiveLayout;
-
