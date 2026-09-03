@@ -712,6 +712,8 @@ const hairColorAliases = {
   핑머: ["핑크머리", "분홍머리", "염색"],
   주머: ["주황머리", "오렌지머리", "염색"],
   와인색: ["와인머리", "버건디", "버건디머리", "염색"],
+  삼색: ["삼색", "세 가지 색", "염색"]
+
 };
 
   const postSortKeys = new Map();
@@ -1049,7 +1051,17 @@ const hairColorAliases = {
           secondaryValue={hairColorFilter}
           setSecondaryValue={setHairColorFilter}
           secondaryLabel="머리색"
-          secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머", "와인색"]}
+          secondaryOptions={[
+            "흑발",
+            "갈발",
+            "금발",
+            "적발",
+            "은발",
+            "핑머",
+            "주머",
+            "와인색",
+            "삼색",
+          ]}
           allActive={
             photoType === "전체" &&
             hairColorFilter === "전체" &&
@@ -1312,6 +1324,7 @@ const hairColorAliases = {
                     <option value="핑머">핑머</option>
                     <option value="주머">주머</option>
                     <option value="와인색">와인색</option>
+                    <option value="삼색">삼색</option>
                   </select>
 
                   {/* 태그 */}
