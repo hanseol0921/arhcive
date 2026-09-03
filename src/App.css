@@ -4520,7 +4520,8 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
 
   .archive-side-tabs {
     position: absolute !important;
-    top: -35px !important;
+    top: auto !important;
+    bottom: 100% !important;
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
@@ -4535,16 +4536,20 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
   .archive-side-tab {
     width: 54px !important;
     min-width: 54px !important;
-    height: 35px !important;
+    height: 32px !important;
     flex: none !important;
-    border: 1px solid #d9d9d9 !important;
-    border-bottom: 0 !important;
+    margin-bottom: 1px !important;
+    border: 0 !important;
     border-radius: 8px 8px 0 0 !important;
     box-shadow: none !important;
   }
 
   .archive-side-tab.active {
-    height: 38px !important;
+    z-index: 2;
+    height: 36px !important;
+    margin-bottom: -1px !important;
+    border: 1px solid #d9d9d9 !important;
+    border-bottom: 1px solid #ffffff !important;
     background: #ffffff !important;
     color: #55514a !important;
   }
