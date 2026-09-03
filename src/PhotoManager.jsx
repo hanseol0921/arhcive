@@ -8,39 +8,43 @@ const HAIR_COLORS = ["흑발", "갈발", "금발", "적발", "은발", "핑머",
 const PHOTO_TYPES = ["셀카", "남찍사", "거울셀카", "그외"];
 const splitTags = (value) => value.split(",").map((tag) => tag.trim()).filter(Boolean);
 const monthStart = (month) => (month ? `${month}-01` : "");
-function monthEnd(month) {
+function nextMonthStart(month) {
   if (!month) return "";
   const [year, number] = month.split("-").map(Number);
-  return new Date(year, number, 0).toISOString().slice(0, 10);
+  const nextYear = number === 12 ? year + 1 : year;
+  const nextMonth = number === 12 ? 1 : number + 1;
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
 }
 
 function PhotoManager() {
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const [startMonth, setStartMonth] = useState(currentMonth);
-  const [endMonth, setEndMonth] = useState(currentMonth);
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [photos, setPhotos] = useState([]);
   const [posts, setPosts] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkHairColor, setBulkHairColor] = useState("");
+  const [bulkPhotoTags, setBulkPhotoTags] = useState("");
   const [loading, setLoading] = useState(false);
   const [savingIds, setSavingIds] = useState([]);
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkTagSaving, setBulkTagSaving] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
   const [saveAllProgress, setSaveAllProgress] = useState("");
   const [largePreview, setLargePreview] = useState(null);
 
   async function loadPhotos() {
-    const startDate = monthStart(startMonth);
-    const endDate = monthEnd(endMonth || startMonth);
-    if (!startDate || !endDate || startDate > endDate) {
-      alert("조회할 월 범위를 확인해주세요.");
+    const startDate = monthStart(selectedMonth);
+    const followingMonth = nextMonthStart(selectedMonth);
+    if (!startDate || !followingMonth) {
+      alert("조회할 월을 선택해주세요.");
       return;
     }
 
     setLoading(true);
     try {
       const { data, error } = await supabase.from("photos").select("*")
-        .gte("date", startDate).lte("date", endDate)
+        .gte("date", startDate).lt("date", followingMonth)
         .order("date", { ascending: false })
         .order("upload_order", { ascending: true }).limit(5000);
       if (error) throw error;
@@ -182,6 +186,41 @@ function PhotoManager() {
     }
   }
 
+  async function applyBulkTags() {
+    const tagsToAdd = splitTags(bulkPhotoTags);
+    if (!tagsToAdd.length || !photos.length) return;
+
+    const ids = selectedIds.length ? selectedIds : photos.map((photo) => photo.id);
+    const label = selectedIds.length
+      ? `선택한 사진 ${ids.length}장`
+      : `현재 불러온 사진 ${ids.length}장 전체`;
+
+    if (!window.confirm(`${label}에 ${tagsToAdd.join(", ")} 태그를 추가할까요?`)) return;
+
+    setBulkTagSaving(true);
+    try {
+      const { error } = await supabase.rpc("apply_tags_to_photos", {
+        p_photo_ids: ids.map(String),
+        p_tags: tagsToAdd,
+      });
+      if (error) throw error;
+
+      const idSet = new Set(ids.map(String));
+      setPhotos((current) => current.map((photo) => {
+        if (!idSet.has(String(photo.id))) return photo;
+        const merged = [...new Set([...splitTags(photo.tagsText || ""), ...tagsToAdd])];
+        return { ...photo, tags: merged, tagsText: merged.join(", ") };
+      }));
+      setBulkPhotoTags("");
+      alert(`${label}에 태그를 적용했습니다.`);
+    } catch (error) {
+      console.error("사진 태그 일괄 적용 오류:", error);
+      alert("태그를 일괄 적용하지 못했습니다. 갱신된 SQL을 실행했는지 확인해주세요.");
+    } finally {
+      setBulkTagSaving(false);
+    }
+  }
+
   return (
     <main className="archive-import-page photo-manager-page">
       <section className="archive-import-top">
@@ -191,10 +230,8 @@ function PhotoManager() {
         </div>
         <p>업로드된 사진을 월별로 불러와 게시물 단위로 정리합니다.</p>
         <div className="photo-manager-month-toolbar">
-          <label>시작 월<input type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} /></label>
-          <span>부터</span>
-          <label>종료 월<input type="month" value={endMonth} onChange={(e) => setEndMonth(e.target.value)} /></label>
-          <button type="button" onClick={loadPhotos} disabled={loading}>{loading ? "불러오는 중..." : "이 기간 불러오기"}</button>
+          <label>조회할 월<input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} /></label>
+          <button type="button" onClick={loadPhotos} disabled={loading || !selectedMonth}>{loading ? "불러오는 중..." : "이달 사진 불러오기"}</button>
         </div>
         <div className="photo-manager-bulk-bar">
           <span>게시물 {groupedPosts.length}개 · 사진 {photos.length}장 · 선택 {selectedIds.length}장</span>
@@ -204,6 +241,20 @@ function PhotoManager() {
           </select>
           <button type="button" onClick={applyBulkHairColor} disabled={bulkSaving || !photos.length || !bulkHairColor}>
             {bulkSaving ? "변경 중..." : selectedIds.length ? `선택 ${selectedIds.length}장 변경` : "조회 기간 전체 변경"}
+          </button>
+          <div className="photo-manager-bulk-tags">
+            <TagPicker
+              value={bulkPhotoTags}
+              onChange={setBulkPhotoTags}
+              placeholder="일괄 추가할 태그"
+            />
+          </div>
+          <button type="button" onClick={applyBulkTags} disabled={bulkTagSaving || !photos.length || !bulkPhotoTags}>
+            {bulkTagSaving
+              ? "태그 적용 중..."
+              : selectedIds.length
+                ? `선택 ${selectedIds.length}장 태그 적용`
+                : "이달 사진 전체 태그 적용"}
           </button>
           <button type="button" onClick={saveAllPhotos} disabled={savingAll || bulkSaving || !photos.length}>
             {savingAll ? `전체 저장 중 ${saveAllProgress}` : "전체 설정 저장"}

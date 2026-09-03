@@ -4436,6 +4436,65 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
     right: 12px;
   }
 }
+
+/* 모바일에서는 콘텐츠 프레임 하나만 남기고 사진 영역을 넓힌다. */
+@media (max-width: 800px) {
+  .page {
+    padding: 8px 6px 18px !important;
+  }
+
+  .archive {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .blue-frame {
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .blue-frame::before,
+  .profile,
+  .notebook-rings {
+    display: none !important;
+  }
+
+  .archive-book-heading {
+    position: static !important;
+    width: 100% !important;
+    margin: 0 0 7px !important;
+    padding: 0 4px !important;
+  }
+
+  .content,
+  .post-content {
+    width: 100% !important;
+    padding: 12px 8px !important;
+    border: 1px solid #d9d9d9 !important;
+    border-radius: 9px !important;
+    box-shadow: none !important;
+  }
+
+  .photo-grid,
+  .video-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  .post-bulk-actions {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+}
+
+.photo-manager-bulk-tags {
+  flex: 1 1 260px;
+  min-width: 210px;
+}
 .archive-draft-pagination {
   display: flex;
   align-items: center;
