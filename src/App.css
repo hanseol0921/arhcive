@@ -851,35 +851,46 @@ select {
   }
 
   .photo-modal-content {
-    width: 95vw;
-    max-height: 90vh;
+    width: min(88vw, 430px);
+    height: min(76dvh, 620px);
+    max-height: 76dvh;
 
     flex-direction: column;
   }
 
   .modal-image {
     width: 100%;
-    height: 55vh;
+    height: auto;
     min-height: 0;
-    flex-shrink: 0;
+    flex: 1 1 auto;
   }
 
   .modal-info {
     width: 100%;
     min-height: 0;
-    max-height: 35vh;
+    max-height: none;
 
-    padding: 18px;
+    padding: 12px 16px 14px;
 
+    overflow: hidden;
+  }
+
+  .photo-modal-content.is-editing {
+    width: 95vw;
+    height: min(88dvh, 720px);
+    max-height: 88dvh;
+  }
+
+  .photo-modal-content.is-editing .modal-info {
     overflow-y: auto;
   }
 
   .modal-tags {
-    margin-top: 15px;
+    margin-top: 9px;
   }
 
   .weverse-link {
-    margin-top: 20px;
+    margin-top: 10px;
   }
 
   .archive-title {
