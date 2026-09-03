@@ -4363,7 +4363,10 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
 }
 
 /* 업로드 사진 관리: 아카이브 가져오기와 같은 카드 UI */
-.photo-manager-page { width: min(1100px, calc(100% - 48px)) !important; }
+.photo-manager-page {
+  width: min(1100px, calc(100% - 48px)) !important;
+  padding-bottom: 120px;
+}
 .photo-manager-month-toolbar,
 .photo-manager-bulk-bar { display: flex; align-items: end; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
 .photo-manager-month-toolbar label { display: grid; gap: 4px; font-size: 10px; text-align: left; }
@@ -4371,7 +4374,21 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
 .photo-manager-month-toolbar button,
 .photo-manager-bulk-bar select,
 .photo-manager-bulk-bar button { min-height: 34px; }
-.photo-manager-bulk-bar { padding-top: 14px; border-top: 1px solid #e8e2d9; }
+.photo-manager-bulk-bar {
+  position: fixed;
+  z-index: 900;
+  left: 50%;
+  bottom: 12px;
+  width: min(1100px, calc(100% - 48px));
+  margin: 0;
+  transform: translateX(-50%);
+  padding: 12px;
+  border: 1px solid #d8d1c7;
+  border-radius: 10px;
+  background: rgba(250, 248, 243, 0.97);
+  box-shadow: 0 7px 22px rgba(62, 54, 44, 0.13);
+  backdrop-filter: blur(10px);
+}
 .photo-manager-bulk-bar > span { margin-right: auto; font-size: 11px; }
 .photo-manager-post-list { margin-top: 16px; }
 .photo-manager-content { max-width: 680px; max-height: 48px; margin-top: 6px; overflow: hidden; white-space: pre-wrap; }
@@ -4426,6 +4443,13 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
 @media (max-width: 700px) {
   .photo-manager-month-toolbar,
   .photo-manager-bulk-bar { align-items: stretch; flex-direction: column; }
+  .photo-manager-page { width: calc(100% - 20px) !important; padding-bottom: 300px; }
+  .photo-manager-bulk-bar {
+    bottom: 6px;
+    width: calc(100% - 20px);
+    max-height: 46vh;
+    overflow-y: auto;
+  }
   .photo-manager-page .archive-import-media-info { grid-template-columns: 1fr; }
   .photo-manager-page .archive-import-media-info > * { grid-column: 1 !important; }
 }
@@ -4478,7 +4502,11 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
     box-shadow: none !important;
   }
 
-  .photo-grid,
+  .photo-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+  }
+
   .video-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 5px !important;

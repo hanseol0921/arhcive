@@ -84,6 +84,10 @@ function PhotoManager() {
     return [...groups.values()];
   }, [photos, posts]);
 
+  const selectedPostCount = groupedPosts.filter((group) =>
+    group.photos.some((photo) => selectedIds.includes(photo.id)),
+  ).length;
+
   function updatePhoto(id, field, value) {
     setPhotos((current) => current.map((photo) => photo.id === id ? { ...photo, [field]: value } : photo));
   }
@@ -233,14 +237,22 @@ function PhotoManager() {
           <label>조회할 월<input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} /></label>
           <button type="button" onClick={loadPhotos} disabled={loading || !selectedMonth}>{loading ? "불러오는 중..." : "이달 사진 불러오기"}</button>
         </div>
+      </section>
+
         <div className="photo-manager-bulk-bar">
-          <span>게시물 {groupedPosts.length}개 · 사진 {photos.length}장 · 선택 {selectedIds.length}장</span>
+          <span>
+            게시물 {groupedPosts.length}개 · 사진 {photos.length}장 · 선택 게시글 {selectedPostCount}개
+          </span>
           <select value={bulkHairColor} onChange={(e) => setBulkHairColor(e.target.value)}>
             <option value="">일괄 머리색 선택</option>
             {HAIR_COLORS.map((color) => <option value={color} key={color}>{color}</option>)}
           </select>
           <button type="button" onClick={applyBulkHairColor} disabled={bulkSaving || !photos.length || !bulkHairColor}>
-            {bulkSaving ? "변경 중..." : selectedIds.length ? `선택 ${selectedIds.length}장 변경` : "조회 기간 전체 변경"}
+            {bulkSaving
+              ? "변경 중..."
+              : selectedIds.length
+                ? `선택 게시글 머리색 적용 (${selectedIds.length}장)`
+                : "이달 게시글 전체 머리색 적용"}
           </button>
           <div className="photo-manager-bulk-tags">
             <TagPicker
@@ -253,14 +265,13 @@ function PhotoManager() {
             {bulkTagSaving
               ? "태그 적용 중..."
               : selectedIds.length
-                ? `선택 ${selectedIds.length}장 태그 적용`
-                : "이달 사진 전체 태그 적용"}
+                ? `선택 게시글 태그 적용 (${selectedIds.length}장)`
+                : "이달 게시글 전체 태그 적용"}
           </button>
           <button type="button" onClick={saveAllPhotos} disabled={savingAll || bulkSaving || !photos.length}>
             {savingAll ? `전체 저장 중 ${saveAllProgress}` : "전체 설정 저장"}
           </button>
         </div>
-      </section>
 
       <div className="archive-draft-list photo-manager-post-list">
         {groupedPosts.map((group) => (
