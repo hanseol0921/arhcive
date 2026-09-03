@@ -4495,7 +4495,9 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
 
   .content,
   .post-content {
+    position: relative !important;
     width: 100% !important;
+    margin-top: 36px !important;
     padding: 12px 8px !important;
     border: 1px solid #d9d9d9 !important;
     border-radius: 9px !important;
@@ -4504,12 +4506,42 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
 
   .photo-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 4px !important;
+    gap: 2px !important;
   }
 
   .video-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 5px !important;
+  }
+
+  .archive-side-tabs {
+    position: absolute !important;
+    top: -35px !important;
+    left: 8px !important;
+    right: auto !important;
+    width: auto !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-end !important;
+    gap: 3px !important;
+  }
+
+  .archive-side-tab {
+    width: 66px !important;
+    min-width: 66px !important;
+    height: 35px !important;
+    flex: none !important;
+    border: 1px solid #d9d9d9 !important;
+    border-bottom: 0 !important;
+    border-radius: 8px 8px 0 0 !important;
+    box-shadow: none !important;
+  }
+
+  .archive-side-tab.active {
+    height: 38px !important;
+    background: #ffffff !important;
+    color: #55514a !important;
   }
 
   .post-bulk-actions {
