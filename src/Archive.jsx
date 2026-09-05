@@ -716,12 +716,26 @@ async function getPhotoPost(photo) {
       }
 
       const blob = await response.blob();
-      const rawExtension =
-        blob.type?.split("/")[1]?.split("+")[0]?.toLowerCase() || "jpg";
+      const responseExtension = blob.type?.startsWith("image/")
+        ? blob.type.split("/")[1]?.split("+")[0]?.toLowerCase()
+        : "";
+      const urlExtension =
+        new URL(photo.image_url).pathname.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase();
+      const rawExtension = responseExtension || urlExtension || "jpg";
       const extension = rawExtension === "jpeg" ? "jpg" : rawExtension;
       const fileName = `riwoo_${photo.date || "photo"}_${photo.id}.${extension}`;
+      const mimeByExtension = {
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        png: "image/png",
+        webp: "image/webp",
+        gif: "image/gif",
+      };
+      const fileType = blob.type?.startsWith("image/")
+        ? blob.type
+        : mimeByExtension[extension] || "image/jpeg";
       const file = new File([blob], fileName, {
-        type: blob.type || "image/jpeg",
+        type: fileType,
       });
       const shareData = {
         files: [file],
@@ -729,20 +743,21 @@ async function getPhotoPost(photo) {
         text: shareText,
       };
 
-      const canShareFile =
-        typeof navigator.share === "function" &&
-        (!navigator.canShare || navigator.canShare(shareData));
-
-      if (canShareFile) {
-        // Android와 iOS에서는 공유창에서 X를 선택하면 사진 파일이 첨부됩니다.
-        // 파일 공유를 지원하는 PC 환경에서도 같은 방식으로 작동합니다.
-        await navigator.share(shareData);
-        return;
+      if (typeof navigator.share === "function") {
+        try {
+          // 일부 모바일 브라우저는 실제 공유가 가능해도
+          // navigator.canShare({ files })를 false로 잘못 반환하므로
+          // canShare 판정만으로 PC용 경로로 보내지 않고 직접 시도합니다.
+          await navigator.share(shareData);
+          return;
+        } catch (shareError) {
+          if (shareError?.name === "AbortError") return;
+          console.error("사진 파일 직접 공유 실패:", shareError);
+        }
       }
 
-      // 파일 공유를 지원하지 않는 PC 브라우저에서는 X 웹 작성창이 사진을
-      // 자동 첨부하도록 허용하지 않습니다. 사진을 먼저 내려받고 작성창을
-      // 열어 사용자가 다운로드된 파일을 바로 선택할 수 있게 합니다.
+      // 현재 브라우저가 파일 공유를 제공하지 않을 때의 공통 대체 동작입니다.
+      // 사진을 먼저 내려받고 X 작성창을 열어 사용자가 파일을 선택할 수 있게 합니다.
       const objectUrl = URL.createObjectURL(blob);
       const downloadLink = document.createElement("a");
       downloadLink.href = objectUrl;
@@ -758,7 +773,7 @@ async function getPhotoPost(photo) {
       window.open(intentUrl, "_blank", "noopener,noreferrer");
 
       alert(
-        "이 PC 브라우저에서는 X에 사진을 자동 첨부할 수 없어 사진을 먼저 다운로드했습니다. 열린 X 작성창에서 다운로드된 사진을 첨부해주세요.",
+        "현재 브라우저가 사진 파일 첨부 공유를 허용하지 않아 사진을 먼저 다운로드했습니다. 열린 X 작성창에서 다운로드된 사진을 첨부해주세요.",
       );
     } catch (error) {
       if (error?.name === "AbortError") return;
