@@ -739,9 +739,8 @@ async function getPhotoPost(photo) {
       });
       const shareData = {
         files: [file],
-        title: "리우 아카이브",
-        text: shareText,
       };
+      let fileShareError = null;
 
       if (typeof navigator.share === "function") {
         try {
@@ -752,6 +751,7 @@ async function getPhotoPost(photo) {
           return;
         } catch (shareError) {
           if (shareError?.name === "AbortError") return;
+          fileShareError = shareError;
           console.error("사진 파일 직접 공유 실패:", shareError);
         }
       }
@@ -773,7 +773,9 @@ async function getPhotoPost(photo) {
       window.open(intentUrl, "_blank", "noopener,noreferrer");
 
       alert(
-        "현재 브라우저가 사진 파일 첨부 공유를 허용하지 않아 사진을 먼저 다운로드했습니다. 열린 X 작성창에서 다운로드된 사진을 첨부해주세요.",
+        `현재 브라우저가 사진 파일 공유를 거절했습니다${
+          fileShareError?.name ? ` (${fileShareError.name})` : ""
+        }. 사진을 먼저 다운로드했으니 열린 X 작성창에서 첨부해주세요. 카카오톡·네이버 등의 앱 안에서 열었다면 메뉴에서 '기본 브라우저로 열기'를 선택해주세요.`,
       );
     } catch (error) {
       if (error?.name === "AbortError") return;
