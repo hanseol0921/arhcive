@@ -4584,12 +4584,12 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
 
   .photo-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 2px !important;
+    gap: 1px !important;
   }
 
   .video-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 5px !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 1px !important;
   }
 
   .archive-side-tabs {
