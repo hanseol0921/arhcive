@@ -705,6 +705,71 @@ async function getPhotoPost(photo) {
     }
   }
 
+  async function sharePhoto(photo) {
+    const shareText = photo.date ? `${photo.date} 리우 사진` : "리우 사진";
+
+    try {
+      const response = await fetch(photo.image_url);
+
+      if (!response.ok) {
+        throw new Error("공유할 사진을 불러오지 못했습니다.");
+      }
+
+      const blob = await response.blob();
+      const rawExtension =
+        blob.type?.split("/")[1]?.split("+")[0]?.toLowerCase() || "jpg";
+      const extension = rawExtension === "jpeg" ? "jpg" : rawExtension;
+      const fileName = `riwoo_${photo.date || "photo"}_${photo.id}.${extension}`;
+      const file = new File([blob], fileName, {
+        type: blob.type || "image/jpeg",
+      });
+      const shareData = {
+        files: [file],
+        title: "리우 아카이브",
+        text: shareText,
+      };
+
+      const canShareFile =
+        typeof navigator.share === "function" &&
+        (!navigator.canShare || navigator.canShare(shareData));
+
+      if (canShareFile) {
+        // Android와 iOS에서는 공유창에서 X를 선택하면 사진 파일이 첨부됩니다.
+        // 파일 공유를 지원하는 PC 환경에서도 같은 방식으로 작동합니다.
+        await navigator.share(shareData);
+        return;
+      }
+
+      // 파일 공유를 지원하지 않는 PC 브라우저에서는 X 웹 작성창이 사진을
+      // 자동 첨부하도록 허용하지 않습니다. 사진을 먼저 내려받고 작성창을
+      // 열어 사용자가 다운로드된 파일을 바로 선택할 수 있게 합니다.
+      const objectUrl = URL.createObjectURL(blob);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = objectUrl;
+      downloadLink.download = fileName;
+      downloadLink.rel = "noopener";
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
+
+      const intentUrl =
+        `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+      window.open(intentUrl, "_blank", "noopener,noreferrer");
+
+      alert(
+        "이 PC 브라우저에서는 X에 사진을 자동 첨부할 수 없어 사진을 먼저 다운로드했습니다. 열린 X 작성창에서 다운로드된 사진을 첨부해주세요.",
+      );
+    } catch (error) {
+      if (error?.name === "AbortError") return;
+
+      console.error("사진 공유 오류:", error);
+      alert(
+        "이 브라우저에서 사진 파일을 공유하지 못했습니다. 브라우저의 파일 다운로드 및 공유 권한을 확인해주세요.",
+      );
+    }
+  }
+
   // =========================
   // 검색 / 필터
   // =========================
@@ -1241,13 +1306,30 @@ const hairColorAliases = {
                   )}
 
                   {!isAdmin && (
-                    <button
-                      type="button"
-                      className="media-download-button"
-                      onClick={() => downloadPhoto(selectedPhoto)}
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "6px",
+                        marginTop: "10px",
+                      }}
                     >
-                      다운로드 ↓
-                    </button>
+                      <button
+                        type="button"
+                        className="media-download-button"
+                        onClick={() => downloadPhoto(selectedPhoto)}
+                      >
+                        다운로드 ↓
+                      </button>
+
+                      <button
+                        type="button"
+                        className="media-download-button"
+                        onClick={() => sharePhoto(selectedPhoto)}
+                      >
+                        X로 공유 ↗
+                      </button>
+                    </div>
                   )}
 
                   {/* 위버스 */}
@@ -1437,5 +1519,3 @@ const hairColorAliases = {
 }
 
 export default Archive;
-
-
