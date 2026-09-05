@@ -15,6 +15,11 @@ function Archive({ isAdmin = false }) {
   const [videoType, setVideoType] = useState("전체");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [homeExtras, setHomeExtras] = useState({
+    scenery: false,
+    food: false,
+    members: false,
+  });
 
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [tagAliases, setTagAliases] = useState([]);
@@ -671,31 +676,32 @@ async function getPhotoPost(photo) {
   // 사진 다운로드
   // =========================
 
-  async function downloadPhoto(photo) {
+  function downloadPhoto(photo) {
     try {
-      const response = await fetch(photo.image_url);
+      const imageUrl = new URL(photo.image_url);
+      const pathExtension =
+        imageUrl.pathname.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() || "jpg";
+      const extension = pathExtension === "jpeg" ? "jpg" : pathExtension;
+      const fileName = `riwoo_${photo.date || "photo"}_${photo.id}.${extension}`;
 
-      if (!response.ok) {
-        throw new Error("사진 파일을 불러오지 못했습니다.");
-      }
-
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const extension =
-        blob.type?.split("/")[1]?.split("+")[0] || "jpg";
+      /*
+        갤럭시의 삼성 인터넷/Chrome에서는 fetch 후 만든 Blob 링크가
+        사용자 클릭 다운로드로 인정되지 않는 경우가 있습니다.
+        Supabase Storage가 Content-Disposition: attachment로 응답하도록
+        원본 공개 URL에 download 파일명을 직접 붙여 다운로드합니다.
+      */
+      imageUrl.searchParams.set("download", fileName);
 
       const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = `riwoo_${photo.date || "photo"}_${photo.id}.${extension}`;
-
+      link.href = imageUrl.toString();
+      link.download = fileName;
+      link.rel = "noopener";
       document.body.appendChild(link);
       link.click();
       link.remove();
-
-      URL.revokeObjectURL(objectUrl);
     } catch (error) {
       console.error("사진 다운로드 오류:", error);
-      alert("사진을 다운로드하지 못했습니다.");
+      window.location.href = photo.image_url;
     }
   }
 
@@ -712,8 +718,6 @@ const hairColorAliases = {
   핑머: ["핑크머리", "분홍머리", "염색"],
   주머: ["주황머리", "오렌지머리", "염색"],
   와인색: ["와인머리", "버건디", "버건디머리", "염색"],
-  삼색: ["삼색", "세 가지 색", "염색"]
-
 };
 
   const postSortKeys = new Map();
@@ -733,10 +737,32 @@ const hairColorAliases = {
     current.createdTime = Math.min(current.createdTime, createdTime);
   });
 
+  function getHomeExtraGroups(photo) {
+    const realTags = Array.isArray(photo.tags) ? photo.tags : [];
+    return {
+      scenery: realTags.includes("풍경"),
+      food: realTags.includes("음식"),
+      members: ["성호", "명재현", "태산", "이한", "운학"]
+        .some((name) => realTags.includes(name)),
+    };
+  }
+
+  function isVisibleOnPublicHome(photo) {
+    const groups = getHomeExtraGroups(photo);
+    const extraKeys = Object.keys(groups).filter((key) => groups[key]);
+
+    // 분류 태그가 있는 사진은 개별 공개값 대신 홈 토글을 따른다.
+    if (extraKeys.length) {
+      return extraKeys.some((key) => homeExtras[key]);
+    }
+
+    return photo.archive_visible !== false;
+  }
+
   const filteredPhotos =
     photos
       .filter((photo) => {
-        if (!isAdmin && photo.archive_visible === false) {
+        if (!isAdmin && !isVisibleOnPublicHome(photo)) {
           return false;
         }
 
@@ -1023,6 +1049,13 @@ const hairColorAliases = {
         return String(aPostKey).localeCompare(String(bPostKey));
       });
 
+  const visiblePhotoCount = photos.filter(
+    (photo) => {
+      if (isAdmin) return photo.archive_visible !== false;
+      return isVisibleOnPublicHome(photo);
+    },
+  ).length;
+
   // =========================
   // 화면
   // =========================
@@ -1036,6 +1069,42 @@ const hairColorAliases = {
         onSearchChange={setSearch}
         searchPlaceholder="사진이나 키워드를 검색해보세요"
       >
+        <div className="archive-media-count" aria-label="사진 개수">
+          {isAdmin ? (
+            <>
+              <span>ARCHIVE <strong>{visiblePhotoCount}</strong></span>
+              <i>/</i>
+              <span>TOTAL <strong>{photos.length}</strong></span>
+            </>
+          ) : (
+            <span>TOTAL <strong>{visiblePhotoCount}</strong></span>
+          )}
+        </div>
+
+        {!isAdmin && (
+          <div className="home-extra-toggles" aria-label="홈 사진 종류 선택">
+            <span>함께 보기</span>
+            {[
+              ["scenery", "풍경"],
+              ["food", "음식"],
+              ["members", "멤버"],
+            ].map(([key, label]) => (
+              <button
+                type="button"
+                key={key}
+                className={homeExtras[key] ? "active" : ""}
+                aria-pressed={homeExtras[key]}
+                onClick={() => setHomeExtras((current) => ({
+                  ...current,
+                  [key]: !current[key],
+                }))}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* 필터 */}
 
         <ArchiveFilters
@@ -1051,17 +1120,7 @@ const hairColorAliases = {
           secondaryValue={hairColorFilter}
           setSecondaryValue={setHairColorFilter}
           secondaryLabel="머리색"
-          secondaryOptions={[
-            "흑발",
-            "갈발",
-            "금발",
-            "적발",
-            "은발",
-            "핑머",
-            "주머",
-            "와인색",
-            "삼색",
-          ]}
+          secondaryOptions={["흑발", "갈발", "금발", "적발", "은발", "핑머", "주머", "와인색"]}
           allActive={
             photoType === "전체" &&
             hairColorFilter === "전체" &&
@@ -1324,7 +1383,6 @@ const hairColorAliases = {
                     <option value="핑머">핑머</option>
                     <option value="주머">주머</option>
                     <option value="와인색">와인색</option>
-                    <option value="삼색">삼색</option>
                   </select>
 
                   {/* 태그 */}
@@ -1379,3 +1437,5 @@ const hairColorAliases = {
 }
 
 export default Archive;
+
+

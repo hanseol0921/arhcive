@@ -153,23 +153,106 @@ function Videos({ isAdmin = false }) {
     }
   }
 
+  async function captureVideoThumbnail(videoElement, time) {
+    if (!videoElement) throw new Error("동영상 화면을 찾지 못했습니다.");
+
+    const targetTime = Math.max(
+      0,
+      Math.min(Number(time) || 0, videoElement.duration || Number(time) || 0),
+    );
+
+    if (Math.abs(videoElement.currentTime - targetTime) > 0.03) {
+      await new Promise((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error("선택 장면을 불러오는 데 시간이 초과되었습니다.")), 10000);
+        const handleSeeked = () => {
+          window.clearTimeout(timeout);
+          videoElement.removeEventListener("error", handleError);
+          resolve();
+        };
+        const handleError = () => {
+          window.clearTimeout(timeout);
+          videoElement.removeEventListener("seeked", handleSeeked);
+          reject(new Error("선택 장면을 불러오지 못했습니다."));
+        };
+        videoElement.addEventListener("seeked", handleSeeked, { once: true });
+        videoElement.addEventListener("error", handleError, { once: true });
+        videoElement.currentTime = targetTime;
+      });
+    }
+
+    const sourceWidth = videoElement.videoWidth;
+    const sourceHeight = videoElement.videoHeight;
+    if (!sourceWidth || !sourceHeight) throw new Error("동영상 크기를 확인하지 못했습니다.");
+
+    const maxSize = 640;
+    const scale = Math.min(1, maxSize / Math.max(sourceWidth, sourceHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+    canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+    const context = canvas.getContext("2d");
+    context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => blob ? resolve(blob) : reject(new Error("썸네일 이미지 생성에 실패했습니다.")),
+        "image/webp",
+        0.82,
+      );
+    });
+  }
+
+  function getVideoStoragePath(publicUrl) {
+    const marker = "/storage/v1/object/public/videos/";
+    if (!publicUrl?.includes(marker)) return null;
+    return decodeURIComponent(publicUrl.split(marker)[1]);
+  }
+
   async function saveThumbnailTime() {
     if (!selectedVideo) return;
 
     setSavingThumbnail(true);
 
     try {
+      const thumbnailBlob = await captureVideoThumbnail(
+        modalVideoRef.current,
+        thumbnailTime,
+      );
+      const thumbnailPath = `thumbnails/${selectedVideo.id}/${Date.now()}.webp`;
+      const { error: uploadError } = await supabase.storage
+        .from("videos")
+        .upload(thumbnailPath, thumbnailBlob, {
+          contentType: "image/webp",
+          upsert: false,
+        });
+      if (uploadError) throw uploadError;
+
+      const { data: thumbnailUrlData } = supabase.storage
+        .from("videos")
+        .getPublicUrl(thumbnailPath);
+      const thumbnailUrl = thumbnailUrlData.publicUrl;
+
       const { error } = await supabase
         .from("videos")
-        .update({ thumbnail_time: thumbnailTime })
+        .update({
+          thumbnail_time: thumbnailTime,
+          thumbnail_url: thumbnailUrl,
+        })
         .eq("id", selectedVideo.id);
 
-      if (error) throw error;
+      if (error) {
+        await supabase.storage.from("videos").remove([thumbnailPath]);
+        throw error;
+      }
+
+      const oldThumbnailPath = getVideoStoragePath(selectedVideo.thumbnail_url);
+      if (oldThumbnailPath?.startsWith("thumbnails/") && oldThumbnailPath !== thumbnailPath) {
+        await supabase.storage.from("videos").remove([oldThumbnailPath]);
+      }
 
       setVideos((current) =>
         current.map((video) =>
           video.id === selectedVideo.id
-            ? { ...video, thumbnail_time: thumbnailTime }
+            ? { ...video, thumbnail_time: thumbnailTime, thumbnail_url: thumbnailUrl }
             : video
         )
       );
@@ -177,7 +260,9 @@ function Videos({ isAdmin = false }) {
       setSelectedVideo((current) => ({
         ...current,
         thumbnail_time: thumbnailTime,
+        thumbnail_url: thumbnailUrl,
       }));
+      alert("선택한 장면을 썸네일 이미지로 저장했습니다.");
     } catch (error) {
       console.error("썸네일 장면 저장 오류:", error);
       alert("썸네일 장면을 저장하지 못했습니다.");
@@ -265,6 +350,8 @@ function Videos({ isAdmin = false }) {
   const filteredVideos = useMemo(() => {
     return [...videos]
       .filter((video) => {
+        if (!isAdmin && video.archive_visible === false) return false;
+
         const post = getPost(video);
 
         const videoDate = post?.date || "";
@@ -341,6 +428,10 @@ function Videos({ isAdmin = false }) {
     [videos],
   );
 
+  const visibleVideoCount = videos.filter(
+    (video) => video.archive_visible !== false,
+  ).length;
+
   async function downloadVideo(video) {
     try {
       const response = await fetch(video.video_url);
@@ -382,6 +473,18 @@ function Videos({ isAdmin = false }) {
                 onSearchChange={setSearch}
                 searchPlaceholder="동영상이나 키워드를 검색해보세요"
               >
+                <div className="archive-media-count" aria-label="동영상 개수">
+                  {isAdmin ? (
+                    <>
+                      <span>ARCHIVE <strong>{visibleVideoCount}</strong></span>
+                      <i>/</i>
+                      <span>TOTAL <strong>{videos.length}</strong></span>
+                    </>
+                  ) : (
+                    <span>TOTAL <strong>{visibleVideoCount}</strong></span>
+                  )}
+                </div>
+
                 <ArchiveFilters
                   type={videoType}
                   setType={setVideoType}
@@ -436,19 +539,28 @@ function Videos({ isAdmin = false }) {
                           onClick={() => setSelectedVideo(video)}
                         >
                           <div className="video-preview">
-                            <video
-                              key={`${video.id}-${video.thumbnail_time || 0}`}
-                              src={video.video_url}
-                              preload="metadata"
-                              muted
-                              playsInline
-                              onLoadedMetadata={(event) =>
-                                showThumbnailFrame(
-                                  event.currentTarget,
-                                  video.thumbnail_time
-                                )
-                              }
-                            />
+                            {video.thumbnail_url ? (
+                              <img
+                                src={video.thumbnail_url}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            ) : (
+                              <video
+                                key={`${video.id}-${video.thumbnail_time || 0}`}
+                                src={video.video_url}
+                                preload="metadata"
+                                muted
+                                playsInline
+                                onLoadedMetadata={(event) =>
+                                  showThumbnailFrame(
+                                    event.currentTarget,
+                                    video.thumbnail_time
+                                  )
+                                }
+                              />
+                            )}
                             <div className="video-thumbnail-play">▶</div>
                           </div>
 
@@ -528,6 +640,7 @@ function Videos({ isAdmin = false }) {
                       <video
                         ref={modalVideoRef}
                         className="video-modal-main"
+                        crossOrigin="anonymous"
                         src={selectedVideo.video_url}
                         poster={selectedVideo.thumbnail_url || undefined}
                         controls
