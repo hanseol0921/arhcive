@@ -360,6 +360,47 @@ select {
   color: #8b867d;
 }
 
+.global-bgm-popup {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1800;
+  width: 230px;
+  padding: 0 12px 11px;
+  border: 1px solid #bcb5aa;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 4px 5px 0 rgba(116, 108, 96, 0.16), 0 12px 30px rgba(55, 50, 43, 0.14);
+  backdrop-filter: blur(8px);
+}
+
+.global-bgm-popup-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 25px;
+  margin: 0 -12px 8px;
+  padding: 0 9px;
+  border-bottom: 1px solid #d6d0c7;
+  border-radius: 6px 6px 0 0;
+  background: #eeeae3;
+  color: #736d64;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.global-bgm-popup .mini-bgm-player {
+  margin-top: 0 !important;
+}
+
+@media (max-width: 768px) {
+  .global-bgm-popup {
+    right: 10px;
+    bottom: 10px;
+    width: min(220px, calc(100vw - 20px));
+  }
+}
+
 
 /* =========================
    본문 흰색 영역
@@ -1540,6 +1581,12 @@ select {
 
 .post-content {
   position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 
@@ -2893,9 +2940,100 @@ body:has(.archive-import-page) {
   margin-bottom: 24px;
 
   white-space: pre-wrap;
+  text-align: left;
 
   font-size: 15px;
   line-height: 1.7;
+}
+
+.post-modal-blocks {
+  width: 100%;
+  text-align: left;
+}
+
+.post-modal-blocks > .post-modal-media {
+  margin-bottom: 12px;
+}
+
+.post-modal-media-item img {
+  cursor: zoom-in;
+}
+
+.post-photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: rgba(15, 15, 15, 0.92);
+  touch-action: pan-y;
+}
+
+.post-photo-lightbox > img {
+  display: block;
+  width: auto;
+  max-width: 100vw;
+  height: auto;
+  max-height: 100dvh;
+  object-fit: contain;
+  user-select: none;
+}
+
+.post-photo-lightbox-close,
+.post-photo-lightbox-nav {
+  position: absolute;
+  z-index: 1;
+  border: 0;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  cursor: pointer;
+}
+
+.post-photo-lightbox-close {
+  top: 14px;
+  right: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 29px;
+}
+
+.post-photo-lightbox-nav {
+  top: 50%;
+  width: 46px;
+  height: 64px;
+  border-radius: 6px;
+  transform: translateY(-50%);
+  font-size: 42px;
+  line-height: 1;
+}
+
+.post-photo-lightbox-nav.prev { left: 14px; }
+.post-photo-lightbox-nav.next { right: 14px; }
+
+.post-photo-lightbox-count {
+  position: absolute;
+  bottom: 17px;
+  left: 50%;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 11px;
+  transform: translateX(-50%);
+}
+
+@media (max-width: 768px) {
+  .post-photo-lightbox { padding: 0; }
+  .post-photo-lightbox-nav {
+    width: 36px;
+    height: 52px;
+    font-size: 34px;
+  }
+  .post-photo-lightbox-nav.prev { left: 4px; }
+  .post-photo-lightbox-nav.next { right: 4px; }
 }
 
 
@@ -3793,11 +3931,19 @@ body {
 .post-modal-media-item {
   display: flex;
   justify-content: center;
+  width: 100%;
 }
 
-.post-modal-media-item img,
+.post-modal-media-item img {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
+}
+
 .post-modal-media-item video {
-  width: auto;
+  width: 100%;
   max-width: 100%;
   max-height: 70vh;
 }
@@ -4584,12 +4730,12 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
 
   .photo-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 1px !important;
+    gap: 2px !important;
   }
 
   .video-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 1px !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
   }
 
   .archive-side-tabs {

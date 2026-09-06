@@ -6,10 +6,16 @@ import "./App.css";
 import TagPicker from "./TagPicker";
 
 function Archive({ isAdmin = false }) {
+  const isMobileDevice =
+    navigator.userAgentData?.mobile ??
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const isDesktopDevice = !isMobileDevice;
   const [photoType, setPhotoType] = useState("전체");
   const [hairColorFilter, setHairColorFilter] = useState("전체");
   const [search, setSearch] = useState("");
   const [photos, setPhotos] = useState([]);
+  const [copyNotice, setCopyNotice] = useState("");
+  const copyNoticeTimerRef = useRef(null);
 
   const [sortOrder, setSortOrder] = useState("최신순");
   const [videoType, setVideoType] = useState("전체");
@@ -24,6 +30,18 @@ function Archive({ isAdmin = false }) {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [tagAliases, setTagAliases] = useState([]);
   const photoModalOpen = selectedPhoto !== null;
+
+  function showCopyNotice(message) {
+    window.clearTimeout(copyNoticeTimerRef.current);
+    setCopyNotice(message);
+    copyNoticeTimerRef.current = window.setTimeout(() => {
+      setCopyNotice("");
+    }, 1800);
+  }
+
+  useEffect(() => {
+    return () => window.clearTimeout(copyNoticeTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (!photoModalOpen) return undefined;
@@ -706,8 +724,6 @@ async function getPhotoPost(photo) {
   }
 
   async function sharePhoto(photo) {
-    const shareText = photo.date ? `${photo.date} 리우 사진` : "리우 사진";
-
     try {
       const response = await fetch(photo.image_url);
 
@@ -737,9 +753,17 @@ async function getPhotoPost(photo) {
       const file = new File([blob], fileName, {
         type: fileType,
       });
-      const shareData = {
-        files: [file],
-      };
+      const isMobileDevice =
+        navigator.userAgentData?.mobile ??
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const shareData = isMobileDevice
+        ? { files: [file] }
+        : {
+            files: [file],
+            title: "리우 아카이브",
+            text: "리우 아카이브 사진",
+            url: window.location.href,
+          };
       let fileShareError = null;
 
       if (typeof navigator.share === "function") {
@@ -756,26 +780,10 @@ async function getPhotoPost(photo) {
         }
       }
 
-      // 현재 브라우저가 파일 공유를 제공하지 않을 때의 공통 대체 동작입니다.
-      // 사진을 먼저 내려받고 X 작성창을 열어 사용자가 파일을 선택할 수 있게 합니다.
-      const objectUrl = URL.createObjectURL(blob);
-      const downloadLink = document.createElement("a");
-      downloadLink.href = objectUrl;
-      downloadLink.download = fileName;
-      downloadLink.rel = "noopener";
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      downloadLink.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
-
-      const intentUrl =
-        `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-      window.open(intentUrl, "_blank", "noopener,noreferrer");
-
       alert(
-        `현재 브라우저가 사진 파일 공유를 거절했습니다${
+        `현재 앱 안의 브라우저에서는 사진 파일을 공유할 수 없습니다${
           fileShareError?.name ? ` (${fileShareError.name})` : ""
-        }. 사진을 먼저 다운로드했으니 열린 X 작성창에서 첨부해주세요. 카카오톡·네이버 등의 앱 안에서 열었다면 메뉴에서 '기본 브라우저로 열기'를 선택해주세요.`,
+        }. 메뉴에서 '기본 브라우저로 열기'를 선택한 뒤 다시 공유해주세요.`,
       );
     } catch (error) {
       if (error?.name === "AbortError") return;
@@ -783,6 +791,53 @@ async function getPhotoPost(photo) {
       console.error("사진 공유 오류:", error);
       alert(
         "이 브라우저에서 사진 파일을 공유하지 못했습니다. 브라우저의 파일 다운로드 및 공유 권한을 확인해주세요.",
+      );
+    }
+  }
+
+  async function copyPhotoToClipboard(photo) {
+    try {
+      if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+        throw new Error("사진 클립보드 복사를 지원하지 않는 브라우저입니다.");
+      }
+
+      const response = await fetch(photo.image_url);
+      if (!response.ok) throw new Error("사진을 불러오지 못했습니다.");
+
+      const sourceBlob = await response.blob();
+      let clipboardBlob = sourceBlob;
+
+      // Windows Chrome/Edge의 이미지 붙여넣기는 PNG가 가장 안정적입니다.
+      if (sourceBlob.type !== "image/png") {
+        const bitmap = await createImageBitmap(sourceBlob);
+        const canvas = document.createElement("canvas");
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("사진 변환 화면을 만들지 못했습니다.");
+        context.drawImage(bitmap, 0, 0);
+        bitmap.close?.();
+
+        clipboardBlob = await new Promise((resolve, reject) => {
+          canvas.toBlob(
+            (blob) =>
+              blob
+                ? resolve(blob)
+                : reject(new Error("사진을 PNG로 변환하지 못했습니다.")),
+            "image/png",
+          );
+        });
+      }
+
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": clipboardBlob }),
+      ]);
+      showCopyNotice("사진이 복사되었습니다");
+    } catch (error) {
+      console.error("사진 복사 오류:", error);
+      alert(
+        "사진을 복사하지 못했습니다. Chrome 또는 Edge에서 클립보드 권한을 허용한 뒤 다시 시도해주세요.",
       );
     }
   }
@@ -1096,12 +1151,22 @@ const hairColorAliases = {
         const aPostKey = a.post_id || `photo-${a.id}`;
         const bPostKey = b.post_id || `photo-${b.id}`;
 
-        // 같은 게시글의 사진은 정렬 방향과 관계없이 원본 순서를 유지한다.
+        // 같은 게시글 안에서도 앞 번호는 오래된 사진, 뒤 번호는 최신 사진으로 본다.
+        // 따라서 오래된순은 1 → 2 → 3, 최신순은 3 → 2 → 1로 표시한다.
         if (aPostKey === bPostKey) {
-          return (
+          const mediaOrderDiff =
             Number(a.media_order ?? a.upload_order ?? 0) -
-            Number(b.media_order ?? b.upload_order ?? 0)
-          );
+            Number(b.media_order ?? b.upload_order ?? 0);
+
+          if (mediaOrderDiff !== 0) {
+            return sortOrder === "최신순"
+              ? -mediaOrderDiff
+              : mediaOrderDiff;
+          }
+
+          // 순서값까지 같은 경우에도 결과가 새로고침마다 섞이지 않게 고정한다.
+          const idDiff = String(a.id).localeCompare(String(b.id));
+          return sortOrder === "최신순" ? -idDiff : idDiff;
         }
 
         const aDate = new Date(a.date || 0).getTime();
@@ -1144,6 +1209,31 @@ const hairColorAliases = {
 
   return (
     <>
+      {copyNotice && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: "28px",
+            zIndex: 3000,
+            transform: "translateX(-50%)",
+            padding: "9px 14px",
+            border: "1px solid rgba(255,255,255,.25)",
+            borderRadius: "5px",
+            background: "rgba(60, 57, 52, .9)",
+            boxShadow: "0 5px 18px rgba(0,0,0,.18)",
+            color: "#fff",
+            fontSize: "11px",
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+          }}
+        >
+          {copyNotice}
+        </div>
+      )}
+
       <ArchiveLayout
         isAdmin={isAdmin}
         activeTab="photos"
@@ -1339,13 +1429,24 @@ const hairColorAliases = {
                         다운로드 ↓
                       </button>
 
-                      <button
-                        type="button"
-                        className="media-download-button"
-                        onClick={() => sharePhoto(selectedPhoto)}
-                      >
-                        X로 공유 ↗
-                      </button>
+                      {isDesktopDevice ? (
+                        <button
+                          type="button"
+                          className="media-download-button"
+                          onClick={() => copyPhotoToClipboard(selectedPhoto)}
+                        >
+                          사진 복사
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="media-download-button"
+                          onClick={() => sharePhoto(selectedPhoto)}
+                        >
+                          X로 공유 ↗
+                        </button>
+                      )}
+
                     </div>
                   )}
 

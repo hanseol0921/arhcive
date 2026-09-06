@@ -1,54 +1,40 @@
+import { useEffect, useState } from "react";
 import Archive from "./Archive";
 import Login from "./Login";
 import AdminRoute from "./AdminRoute";
 import Posts from "./Posts";
 import Videos from "./Videos";
+import Diary from "./Diary";
+import { GlobalBgmPlayer } from "./ArchiveLayout";
 
 function App() {
-  const path = window.location.pathname;
+  const [path, setPath] = useState(window.location.pathname);
 
-  // =========================
-  // 로그인
-  // =========================
+  useEffect(() => {
+    const handleNavigation = () => setPath(window.location.pathname);
+    window.addEventListener("popstate", handleNavigation);
+    window.addEventListener("archive:navigate", handleNavigation);
+    return () => {
+      window.removeEventListener("popstate", handleNavigation);
+      window.removeEventListener("archive:navigate", handleNavigation);
+    };
+  }, []);
 
-  if (path === "/login") {
-    return <Login />;
-  }
+  if (path === "/login") return <Login />;
 
-  // =========================
-  // 관리자 영역
-  // /admin
-  // /admin/upload
-  // /admin/videos
-  // /admin/posts
-  // 전부 여기로
-  // =========================
+  let page;
+  if (path.startsWith("/admin")) page = <AdminRoute />;
+  else if (path === "/videos") page = <Videos isAdmin={false} />;
+  else if (path === "/posts") page = <Posts isAdmin={false} />;
+  else if (path === "/diary") page = <Diary isAdmin={false} />;
+  else page = <Archive isAdmin={false} />;
 
-  if (path.startsWith("/admin")) {
-    return <AdminRoute />;
-  }
-
-  // =========================
-  // 일반 동영상 아카이브
-  // =========================
-
-  if (path === "/videos") {
-    return <Videos isAdmin={false} />;
-  }
-
-  // =========================
-  // 일반 게시글 아카이브
-  // =========================
-
-  if (path === "/posts") {
-    return <Posts isAdmin={false} />;
-  }
-
-  // =========================
-  // 일반 사진 아카이브
-  // =========================
-
-  return <Archive isAdmin={false} />;
+  return (
+    <>
+      {page}
+      <GlobalBgmPlayer isAdmin={path.startsWith("/admin")} />
+    </>
+  );
 }
 
 export default App;

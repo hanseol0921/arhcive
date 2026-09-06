@@ -4,9 +4,9 @@ import AdminHome from "./AdminHome";
 import Admin from "./Admin";
 import Videos from "./Videos";
 import Posts from "./Posts";
+import Diary from "./Diary";
 import ArchiveImport from "./ArchiveImport";
 import PhotoManager from "./PhotoManager";
-import TagManager from "./TagManager";
 
 function AdminRoute() {
   const [session, setSession] = useState(null);
@@ -15,22 +15,26 @@ function AdminRoute() {
 
   useEffect(() => {
     checkSession();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
-        setSession(nextSession);
-        setLoading(false);
-      },
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setLoading(false);
+    });
+
     return () => subscription.unsubscribe();
   }, []);
 
   async function checkSession() {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    const {
+      data: { session: currentSession },
+    } = await supabase.auth.getSession();
     setSession(currentSession);
     setLoading(false);
   }
 
   if (loading) return null;
+
   if (!session) {
     window.location.href = "/login";
     return null;
@@ -40,8 +44,9 @@ function AdminRoute() {
   if (path === "/admin/upload") return <Admin />;
   if (path === "/admin/videos") return <Videos isAdmin={true} />;
   if (path === "/admin/posts") return <Posts isAdmin={true} />;
+  if (path === "/admin/diary") return <Diary isAdmin={true} />;
   if (path === "/admin/photos/manage") return <PhotoManager />;
-  if (path === "/admin/tags") return <TagManager />;
+
   return <AdminHome />;
 }
 

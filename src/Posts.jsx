@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
+import ArchiveLayout from "./ArchiveLayout";
 import "./App.css";
+import "./Diary.css";
 
 function Posts({ isAdmin = false }) {
   const [posts, setPosts] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [videos, setVideos] = useState([]);
+  const [search, setSearch] = useState("");
 
   const [loading, setLoading] = useState(true);
 
@@ -14,6 +17,8 @@ function Posts({ isAdmin = false }) {
   // =========================
 
   const [selectedPost, setSelectedPost] = useState(null);
+  const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const lightboxTouchStartX = useRef(null);
 
   // =========================
   // 게시글 수정
@@ -26,6 +31,9 @@ function Posts({ isAdmin = false }) {
   const [editPostAuthor, setEditPostAuthor] = useState("");
   const [editPostContent, setEditPostContent] = useState("");
   const [editPostWeverseUrl, setEditPostWeverseUrl] = useState("");
+  const [editIsDiary, setEditIsDiary] = useState(false);
+  const [editDiaryTitle, setEditDiaryTitle] = useState("");
+  const [editDiaryCoverPhotoId, setEditDiaryCoverPhotoId] = useState("");
 
   const [postSaving, setPostSaving] = useState(false);
   const [editMedia, setEditMedia] = useState([]);
@@ -39,6 +47,30 @@ function Posts({ isAdmin = false }) {
   useEffect(() => {
     loadPosts();
   }, []);
+
+  async function loadAllLinkedMedia(tableName) {
+    const pageSize = 1000;
+    const rows = [];
+    let from = 0;
+
+    while (true) {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select("*")
+        .not("post_id", "is", null)
+        .order("id", { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error) throw error;
+
+      const page = data || [];
+      rows.push(...page);
+      if (page.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return rows;
+  }
 
   async function loadPosts() {
     setLoading(true);
@@ -72,35 +104,23 @@ function Posts({ isAdmin = false }) {
         throw postError;
       }
 
-      // 사진
-      const {
-        data: photoData,
-        error: photoError,
-      } = await supabase
-        .from("photos")
-        .select("*")
-        .not("post_id", "is", null);
-
-      if (photoError) {
-        throw photoError;
-      }
-
-      // 동영상
-      const {
-        data: videoData,
-        error: videoError,
-      } = await supabase
-        .from("videos")
-        .select("*")
-        .not("post_id", "is", null);
-
-      if (videoError) {
-        throw videoError;
-      }
+      // Supabase의 단일 응답 행 제한에 걸리지 않도록 끝까지 나눠서 조회한다.
+      const [photoData, videoData] = await Promise.all([
+        loadAllLinkedMedia("photos"),
+        loadAllLinkedMedia("videos"),
+      ]);
 
       setPosts(postData || []);
       setPhotos(photoData || []);
       setVideos(videoData || []);
+
+      const requestedPostId = new URLSearchParams(window.location.search).get("post");
+      if (requestedPostId) {
+        const requestedPost = (postData || []).find(
+          (post) => String(post.id) === String(requestedPostId),
+        );
+        if (requestedPost) setSelectedPost(requestedPost);
+      }
     } catch (error) {
       console.error(
         "게시글 불러오기 오류:",
@@ -152,6 +172,49 @@ function Posts({ isAdmin = false }) {
     });
   }
 
+  function renderOrderedPostContent(post, media) {
+    const blocks = Array.isArray(post.content_blocks) ? post.content_blocks : [];
+    if (!blocks.length) return null;
+    const orderedPhotos = media.filter((item) => item.mediaKind === "photo");
+    const orderedVideos = media.filter((item) => item.mediaKind === "video");
+    return blocks.map((block, blockIndex) => {
+      if (block?.type === "text" && block.content) {
+        return <div className="post-modal-body" key={`text-${blockIndex}`}>{block.content}</div>;
+      }
+      const item = block?.type === "photo"
+        ? orderedPhotos[Number(block.index)]
+        : block?.type === "video"
+          ? orderedVideos[Number(block.index)]
+          : null;
+      if (!item) return null;
+      return (
+        <div className="post-modal-media" key={`${block.type}-${blockIndex}`}>
+          <div className="post-modal-media-item">
+            {block.type === "photo" ? (
+              <img
+                src={item.thumbnail_url || item.image_url}
+                data-original-src={item.image_url}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                onError={(event) => {
+                  const original = event.currentTarget.dataset.originalSrc;
+                  if (original && event.currentTarget.src !== original) {
+                    event.currentTarget.src = original;
+                  }
+                }}
+                onClick={() => openPhotoLightbox(item)}
+                style={{ objectPosition: item.crop_position || "50% 50%" }}
+              />
+            ) : (
+              <video src={item.video_url} poster={item.thumbnail_url || undefined} controls preload="metadata" />
+            )}
+          </div>
+        </div>
+      );
+    });
+  }
+
   // =========================
   // 날짜 표시
   // =========================
@@ -177,6 +240,7 @@ function Posts({ isAdmin = false }) {
       {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: "Asia/Seoul",
       }
     );
   }
@@ -186,6 +250,7 @@ function Posts({ isAdmin = false }) {
   // =========================
 
   function closePostModal() {
+    setLightboxIndex(-1);
     setSelectedPost(null);
     setEditPostMode(false);
   }
@@ -203,13 +268,15 @@ function Posts({ isAdmin = false }) {
       const date =
         new Date(post.posted_at);
 
-      const hours = String(
-        date.getHours()
-      ).padStart(2, "0");
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Seoul",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).formatToParts(date);
 
-      const minutes = String(
-        date.getMinutes()
-      ).padStart(2, "0");
+      const hours = parts.find((part) => part.type === "hour")?.value || "00";
+      const minutes = parts.find((part) => part.type === "minute")?.value || "00";
 
       setEditPostTime(
         `${hours}:${minutes}`
@@ -228,6 +295,12 @@ function Posts({ isAdmin = false }) {
 
     setEditPostWeverseUrl(
       post.weverse_url || ""
+    );
+
+    setEditIsDiary(post.is_diary === true);
+    setEditDiaryTitle(post.diary_title || "");
+    setEditDiaryCoverPhotoId(
+      post.diary_cover_photo_id ? String(post.diary_cover_photo_id) : ""
     );
 
     const media = getPostMedia(post.id);
@@ -502,6 +575,11 @@ function handleEditCropEnd(
     return;
   }
 
+  if (editIsDiary && !editDiaryTitle.trim()) {
+    alert("다이어리 제목을 입력해주세요.");
+    return;
+  }
+
   setPostSaving(true);
 
   try {
@@ -517,7 +595,7 @@ function handleEditCropEnd(
       editPostTime
     ) {
       postedAt =
-        `${editPostDate}T${editPostTime}:00`;
+        `${editPostDate}T${editPostTime}:00+09:00`;
     }
 
     // =========================
@@ -545,6 +623,13 @@ function handleEditCropEnd(
         weverse_url:
           editPostWeverseUrl.trim() ||
           null,
+
+        is_diary: editIsDiary,
+        diary_title: editIsDiary ? editDiaryTitle.trim() : null,
+        diary_cover_photo_id:
+          editIsDiary && editDiaryCoverPhotoId
+            ? String(editDiaryCoverPhotoId)
+            : null,
       })
       .eq(
         "id",
@@ -555,6 +640,12 @@ function handleEditCropEnd(
 
     if (postError) {
       throw postError;
+    }
+
+    if (editIsDiary && updatedPost?.is_diary !== true) {
+      throw new Error(
+        "다이어리 설정이 DB에 저장되지 않았습니다. diary_migration.sql을 먼저 실행해주세요.",
+      );
     }
 
     // =========================
@@ -770,37 +861,10 @@ function handleEditCropEnd(
     // 3. 화면 데이터 다시 불러오기
     // =========================
 
-    const {
-      data: newPhotos,
-      error: photoLoadError,
-    } = await supabase
-      .from("photos")
-      .select("*")
-      .not(
-        "post_id",
-        "is",
-        null
-      );
-
-    if (photoLoadError) {
-      throw photoLoadError;
-    }
-
-    const {
-      data: newVideos,
-      error: videoLoadError,
-    } = await supabase
-      .from("videos")
-      .select("*")
-      .not(
-        "post_id",
-        "is",
-        null
-      );
-
-    if (videoLoadError) {
-      throw videoLoadError;
-    }
+    const [newPhotos, newVideos] = await Promise.all([
+      loadAllLinkedMedia("photos"),
+      loadAllLinkedMedia("videos"),
+    ]);
 
     setPhotos(
       newPhotos || []
@@ -1175,113 +1239,58 @@ function handleEditCropEnd(
         )
       : [];
 
+  const selectedPhotos = selectedMedia.filter(
+    (item) => item.mediaKind === "photo",
+  );
+
+  function openPhotoLightbox(photo) {
+    const index = selectedPhotos.findIndex(
+      (item) => String(item.id) === String(photo.id),
+    );
+    if (index >= 0) setLightboxIndex(index);
+  }
+
+  function movePhotoLightbox(direction) {
+    if (!selectedPhotos.length) return;
+    setLightboxIndex((current) =>
+      (current + direction + selectedPhotos.length) % selectedPhotos.length,
+    );
+  }
+
+  useEffect(() => {
+    if (lightboxIndex < 0) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setLightboxIndex(-1);
+      if (event.key === "ArrowLeft") movePhotoLightbox(-1);
+      if (event.key === "ArrowRight") movePhotoLightbox(1);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxIndex, selectedPhotos.length]);
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredPosts = normalizedSearch
+    ? posts.filter((post) =>
+        [post.content, post.author, post.date, post.diary_title]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(normalizedSearch)),
+      )
+    : posts;
+
   // =========================
   // 화면
   // =========================
 
   return (
-    <div className="page">
-      <div className="archive">
-
-        {/* =========================
-            상단
-        ========================= */}
-
-        <header className="top">
-          <div className="logo">
-            RIWOO
-
-            <span>
-              POST ARCHIVE
-            </span>
-          </div>
-        </header>
-
-        {/* =========================
-            파란 프레임
-        ========================= */}
-
-        <div className="blue-frame">
-
-          {/* =========================
-              프로필
-          ========================= */}
-
-          <aside className="profile">
-
-            <div className="profile-image">
-              PROFILE
-            </div>
-
-            <div className="profile-name">
-              링링의 한 마디
-            </div>
-
-            <div className="profile-text">
-              하이류~~~
-            </div>
-
-            <div className="profile-line" />
-
-            <div className="profile-info">
-              <span>
-                TOTAL POST
-              </span>
-
-              <strong>
-                {posts.length}
-              </strong>
-            </div>
-
-            <div className="music">
-              ♪ 오늘만 I LOVE YOU
-            </div>
-
-          </aside>
-
-          {/* =========================
-              공책 링
-          ========================= */}
-
-          <div className="notebook-rings">
-
-            <div className="ring-group top-rings">
-              <div className="notebook-ring" />
-              <div className="notebook-ring" />
-            </div>
-
-            <div className="ring-group bottom-rings">
-              <div className="notebook-ring" />
-              <div className="notebook-ring" />
-            </div>
-
-          </div>
-
-          {/* =========================
-              게시글 본문
-          ========================= */}
-
-          <main className="content post-content">
-
-            {/* 제목 */}
-
-            <div className="post-archive-header">
-
-              <div>
-                <div className="post-archive-small">
-                  WEVERSE
-                </div>
-
-                <div className="post-archive-title">
-                  POSTS
-                </div>
-              </div>
-
-              <div className="post-total">
-                TOTAL {posts.length}
-              </div>
-
-            </div>
+    <>
+      <ArchiveLayout
+        isAdmin={isAdmin}
+        activeTab="posts"
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="게시글 내용을 검색해보세요"
+      >
+          <div className="post-content">
 
             {/* =========================
                 게시글 목록
@@ -1329,14 +1338,14 @@ function handleEditCropEnd(
               )}
 
               {!loading &&
-                posts.length === 0 && (
+                filteredPosts.length === 0 && (
                   <div className="post-empty">
                     아직 게시글이 없습니다.
                   </div>
                 )}
 
               {!loading &&
-                posts.map((post) => {
+                filteredPosts.map((post) => {
                   const media =
                     getPostMedia(
                       post.id
@@ -1444,10 +1453,17 @@ function handleEditCropEnd(
                                   "photo" && (
 
                                   <img
-                                    src={
-                                      item.image_url
-                                    }
+                                    src={item.thumbnail_url || item.image_url}
+                                    data-original-src={item.image_url}
                                     alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                    onError={(event) => {
+                                      const original = event.currentTarget.dataset.originalSrc;
+                                      if (original && event.currentTarget.src !== original) {
+                                        event.currentTarget.src = original;
+                                      }
+                                    }}
                                     style={{
                                       objectPosition:
                                         item.crop_position ||
@@ -1514,58 +1530,8 @@ function handleEditCropEnd(
 
             </div>
 
-          </main>
-
-          {/* =========================
-              오른쪽 탭
-          ========================= */}
-
-          <div className="archive-side-tabs">
-
-            <button
-              type="button"
-              className="archive-side-tab"
-              onClick={() => {
-                window.location.href =
-                  isAdmin
-                    ? "/admin"
-                    : "/";
-              }}
-            >
-              사진
-            </button>
-
-            <button
-              type="button"
-              className="archive-side-tab"
-              onClick={() => {
-                window.location.href =
-                  isAdmin
-                    ? "/admin/videos"
-                    : "/videos";
-              }}
-            >
-              동영상
-            </button>
-
-            <button
-              type="button"
-              className="archive-side-tab active"
-              onClick={() => {
-                window.location.href =
-                  isAdmin
-                    ? "/admin/posts"
-                    : "/posts";
-              }}
-            >
-              게시글
-            </button>
-
           </div>
-
-        </div>
-
-      </div>
+      </ArchiveLayout>
 
       {/* =========================
           게시글 상세 모달
@@ -1575,7 +1541,11 @@ function handleEditCropEnd(
 
         <div
           className="post-modal"
-          onClick={closePostModal}
+          onClick={(event) => {
+            if (event.target !== event.currentTarget) return;
+            if (!window.getSelection?.().isCollapsed) return;
+            closePostModal();
+          }}
         >
 
           <div
@@ -1651,6 +1621,11 @@ function handleEditCropEnd(
 
                 {/* 본문 */}
 
+                {Array.isArray(selectedPost.content_blocks) && selectedPost.content_blocks.length ? (
+                  <div className="post-modal-blocks">
+                    {renderOrderedPostContent(selectedPost, selectedMedia)}
+                  </div>
+                ) : <>
                 {selectedPost.content && (
                   <div className="post-modal-body">
                     {selectedPost.content}
@@ -1678,10 +1653,18 @@ function handleEditCropEnd(
                             "photo" ? (
 
                             <img
-                              src={
-                                item.image_url
-                              }
+                              src={item.thumbnail_url || item.image_url}
+                              data-original-src={item.image_url}
                               alt=""
+                              loading="lazy"
+                              decoding="async"
+                              onError={(event) => {
+                                const original = event.currentTarget.dataset.originalSrc;
+                                if (original && event.currentTarget.src !== original) {
+                                  event.currentTarget.src = original;
+                                }
+                              }}
+                              onClick={() => openPhotoLightbox(item)}
                               style={{
                                 objectPosition:
                                   item.crop_position ||
@@ -1713,6 +1696,7 @@ function handleEditCropEnd(
                   </div>
 
                 )}
+                </>}
 
                 {/* 위버스 링크 */}
 
@@ -1827,6 +1811,74 @@ function handleEditCropEnd(
                     )
                   }
                 />
+
+                <div className="diary-post-editor">
+                  <label className="diary-post-toggle">
+                    <input
+                      type="checkbox"
+                      checked={editIsDiary}
+                      onChange={(e) => setEditIsDiary(e.target.checked)}
+                    />
+                    이 게시글을 다이어리에 표시
+                  </label>
+
+                  {editIsDiary && (
+                    <>
+                      <div className="diary-save-notice">
+                        제목과 대표 사진을 정한 뒤 상세창 맨 아래의 저장 버튼을 눌러야 다이어리에 등록됩니다.
+                      </div>
+                      <label>다이어리 제목</label>
+                      <input
+                        type="text"
+                        value={editDiaryTitle}
+                        onChange={(e) => setEditDiaryTitle(e.target.value)}
+                        placeholder="예: 도쿄 여행 1일 차"
+                      />
+
+                      <label>대표 사진</label>
+                      <div className="diary-cover-picker">
+                        {editMedia
+                          .filter(
+                            (item) =>
+                              item.mediaKind === "photo" && !item.deletePending,
+                          )
+                          .map((item, index) => (
+                            <button
+                              type="button"
+                              key={item.id}
+                              className={
+                                String(editDiaryCoverPhotoId) === String(item.id)
+                                  ? "selected"
+                                  : ""
+                              }
+                              onClick={() =>
+                                setEditDiaryCoverPhotoId(String(item.id))
+                              }
+                            >
+                              <img
+                                src={item.thumbnail_url || item.image_url}
+                                alt={`대표 사진 후보 ${index + 1}`}
+                              />
+                              <span>
+                                {String(editDiaryCoverPhotoId) === String(item.id)
+                                  ? "대표 사진"
+                                  : `사진 ${index + 1}`}
+                              </span>
+                            </button>
+                          ))}
+
+                        {editMedia.filter(
+                          (item) =>
+                            item.mediaKind === "photo" && !item.deletePending,
+                        ).length === 0 && (
+                          <div className="diary-cover-empty">
+                            대표로 선택할 사진이 없습니다.
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 <div className="post-edit-media-section">
 
@@ -2244,7 +2296,72 @@ function handleEditCropEnd(
 
       )}
 
-    </div>
+      {lightboxIndex >= 0 && selectedPhotos[lightboxIndex] && (
+        <div
+          className="post-photo-lightbox"
+          onClick={() => setLightboxIndex(-1)}
+          onTouchStart={(event) => {
+            lightboxTouchStartX.current = event.touches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(event) => {
+            const startX = lightboxTouchStartX.current;
+            const endX = event.changedTouches[0]?.clientX;
+            lightboxTouchStartX.current = null;
+            if (startX == null || endX == null) return;
+            const distance = endX - startX;
+            if (Math.abs(distance) > 45) movePhotoLightbox(distance > 0 ? -1 : 1);
+          }}
+        >
+          <button
+            type="button"
+            className="post-photo-lightbox-close"
+            onClick={() => setLightboxIndex(-1)}
+            aria-label="사진 크게 보기 닫기"
+          >
+            ×
+          </button>
+
+          {selectedPhotos.length > 1 && (
+            <button
+              type="button"
+              className="post-photo-lightbox-nav prev"
+              onClick={(event) => {
+                event.stopPropagation();
+                movePhotoLightbox(-1);
+              }}
+              aria-label="이전 사진"
+            >
+              ‹
+            </button>
+          )}
+
+          <img
+            src={selectedPhotos[lightboxIndex].image_url}
+            alt={`${lightboxIndex + 1}번째 사진`}
+            onClick={(event) => event.stopPropagation()}
+          />
+
+          {selectedPhotos.length > 1 && (
+            <button
+              type="button"
+              className="post-photo-lightbox-nav next"
+              onClick={(event) => {
+                event.stopPropagation();
+                movePhotoLightbox(1);
+              }}
+              aria-label="다음 사진"
+            >
+              ›
+            </button>
+          )}
+
+          <div className="post-photo-lightbox-count">
+            {lightboxIndex + 1} / {selectedPhotos.length}
+          </div>
+        </div>
+      )}
+
+    </>
   );
 }
 

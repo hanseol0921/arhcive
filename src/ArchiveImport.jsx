@@ -205,6 +205,7 @@ function ArchiveImport() {
     const rawMetadataBody = readRawPdfInfoString(pdfBytes, "WeverseBodyText");
     const rawMetadataDate = readRawPdfInfoString(pdfBytes, "WeversePostDate");
     const rawMetadataUrl = readRawPdfInfoString(pdfBytes, "WeversePostURL");
+    const rawContentBlocks = readRawPdfInfoString(pdfBytes, "WeverseContentBlocks");
 
     const pdf = await pdfjsLib.getDocument({
       data: buffer,
@@ -215,6 +216,7 @@ function ArchiveImport() {
     let exactMetadataBody = "";
     let metadataDate = "";
     let metadataUrl = "";
+    let contentBlocks = [];
 
     try {
       const pdfMetadata = await pdf.getMetadata();
@@ -234,6 +236,17 @@ function ArchiveImport() {
       metadataUrl = String(
         rawMetadataUrl || custom.WeversePostURL || info.WeversePostURL || "",
       );
+      const blocksJson = String(
+        rawContentBlocks ||
+          custom.WeverseContentBlocks ||
+          info.WeverseContentBlocks ||
+          pdfMetadata?.metadata?.get?.("WeverseContentBlocks") ||
+          "",
+      );
+      if (blocksJson) {
+        const parsed = JSON.parse(blocksJson);
+        if (Array.isArray(parsed)) contentBlocks = parsed;
+      }
     } catch (metadataError) {
       console.warn("PDF 원문 메타데이터를 읽지 못했습니다:", metadataError);
     }
@@ -380,16 +393,16 @@ function ArchiveImport() {
           : "");
       const originalUrl = metadataUrl || extractedLink?.[1] || "";
 
-      return [
+      return { text: [
         dateLine,
         originalUrl ? `원본 링크: ${originalUrl}` : "",
         exactMetadataBody,
       ]
         .filter((value, index) => index === 2 || Boolean(value))
-        .join("\n");
+        .join("\n"), contentBlocks };
     }
 
-    return extractedText;
+    return { text: extractedText, contentBlocks };
   }
 
   // =========================
@@ -589,9 +602,11 @@ function ArchiveImport() {
 
     if (pdfFile) {
       try {
-        pdfText = await readPdfText(pdfFile);
+        const pdfResult = await readPdfText(pdfFile);
+        pdfText = pdfResult.text;
 
         metadata = parsePdfMetadata(pdfText, fallbackDate);
+        metadata.contentBlocks = pdfResult.contentBlocks;
       } catch (error) {
         console.error(`${folderPath} PDF 읽기 실패`, error);
       }
@@ -748,6 +763,10 @@ function ArchiveImport() {
       postContent: metadata.content,
 
       postWeverseUrl: metadata.weverseUrl,
+
+      contentBlocks: Array.isArray(metadata.contentBlocks)
+        ? metadata.contentBlocks
+        : [],
 
       media,
 
@@ -1217,7 +1236,8 @@ function ArchiveImport() {
       let postedAt = null;
 
       if (draft.postDate && draft.postTime) {
-        postedAt = `${draft.postDate}T${draft.postTime}:00`;
+        // PDF의 날짜/시간은 위버스 한국시간이므로 DB에도 시간대를 명시한다.
+        postedAt = `${draft.postDate}T${draft.postTime}:00+09:00`;
       }
 
       // =========================
@@ -1263,6 +1283,10 @@ function ArchiveImport() {
           weverse_url: draft.postWeverseUrl.trim() || null,
 
           author: draft.postAuthor || null,
+
+          content_blocks: draft.contentBlocks.length
+            ? draft.contentBlocks
+            : null,
         })
         .select()
         .single();

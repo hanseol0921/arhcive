@@ -32,6 +32,31 @@ function formatBgmTime(seconds) {
   return `${minutes}:${remainder}`;
 }
 
+function getBgmDock() {
+  let dock = document.getElementById("riwoo-global-bgm-dock");
+  if (!dock) {
+    dock = document.createElement("div");
+    dock.id = "riwoo-global-bgm-dock";
+    Object.assign(dock.style, {
+      position: "fixed",
+      width: "1px",
+      height: "1px",
+      left: "-9999px",
+      top: "-9999px",
+      overflow: "hidden",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(dock);
+  }
+  return dock;
+}
+
+function navigateInsideArchive(path) {
+  if (`${window.location.pathname}${window.location.search}` === path) return;
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new Event("archive:navigate"));
+}
+
 function MiniBgmPlayer({ playlist }) {
   const playerElementRef = useRef(null);
   const playerRef = useRef(null);
@@ -62,6 +87,7 @@ function MiniBgmPlayer({ playlist }) {
     const nextTrack = tracks[normalizedIndex];
 
     setTrackIndex(normalizedIndex);
+    window.__riwooBgmTrackIndex = normalizedIndex;
     setCurrentTime(0);
     playerRef.current?.loadVideoById(getYoutubeVideoId(nextTrack.url));
   }
@@ -88,6 +114,28 @@ function MiniBgmPlayer({ playlist }) {
     function createPlayer() {
       if (cancelled || playerRef.current || !window.YT?.Player) return;
 
+      if (window.__riwooBgmPlayer?.getIframe) {
+        playerRef.current = window.__riwooBgmPlayer;
+        const iframe = playerRef.current.getIframe();
+        if (playerElementRef.current && iframe) {
+          playerElementRef.current.appendChild(iframe);
+        }
+        const restoredIndex = Number(window.__riwooBgmTrackIndex || 0);
+        setTrackIndex(Math.min(restoredIndex, Math.max(tracks.length - 1, 0)));
+        setReady(true);
+        setPlaying(playerRef.current.getPlayerState?.() === window.YT.PlayerState.PLAYING);
+        setCurrentTime(playerRef.current.getCurrentTime?.() || 0);
+        setDuration(playerRef.current.getDuration?.() || 0);
+        progressTimer = window.setInterval(() => {
+          const player = playerRef.current;
+          if (!player?.getCurrentTime) return;
+          setCurrentTime(player.getCurrentTime() || 0);
+          setDuration(player.getDuration() || 0);
+          setPlaying(player.getPlayerState?.() === window.YT.PlayerState.PLAYING);
+        }, 500);
+        return;
+      }
+
       playerRef.current = new window.YT.Player(playerElementRef.current, {
         width: "1",
         height: "1",
@@ -99,6 +147,8 @@ function MiniBgmPlayer({ playlist }) {
         },
         events: {
           onReady: (event) => {
+            window.__riwooBgmPlayer = event.target;
+            window.__riwooBgmTrackIndex = window.__riwooBgmTrackIndex || 0;
             setReady(true);
             setDuration(event.target.getDuration() || 0);
           },
@@ -113,6 +163,7 @@ function MiniBgmPlayer({ playlist }) {
               } else {
                 setTrackIndex((current) => {
                   const next = (current + 1) % tracks.length;
+                  window.__riwooBgmTrackIndex = next;
                   event.target.loadVideoById(
                     getYoutubeVideoId(tracks[next].url),
                   );
@@ -154,7 +205,8 @@ function MiniBgmPlayer({ playlist }) {
       cancelled = true;
       window.clearInterval(apiWaitTimer);
       window.clearInterval(progressTimer);
-      playerRef.current?.destroy?.();
+      const iframe = playerRef.current?.getIframe?.();
+      if (iframe) getBgmDock().appendChild(iframe);
       playerRef.current = null;
     };
   }, [playlist]);
@@ -460,11 +512,75 @@ function BgmPlaylistManager({ playlist, onSave, saving }) {
   );
 }
 
+export function GlobalBgmPlayer({ isAdmin = false }) {
+  const [playlist, setPlaylist] = useState(DEFAULT_BGM_PLAYLIST);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "bgm_playlist")
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled || error || !data?.value) return;
+        try {
+          const parsed = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
+          const valid = Array.isArray(parsed)
+            ? parsed.filter((track) => track?.url && track?.title && track?.artist)
+            : [];
+          if (valid.length) setPlaylist(valid);
+        } catch (error) {
+          console.error("저장된 BGM 재생목록 형식 오류:", error);
+        }
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function savePlaylist(nextPlaylist) {
+    setSaving(true);
+    try {
+      const cleaned = nextPlaylist.map((track) => ({
+        url: String(track.url || "").trim(),
+        artist: String(track.artist || "").trim(),
+        title: String(track.title || "").trim(),
+      }));
+      const { error } = await supabase.from("site_settings").upsert(
+        { key: "bgm_playlist", value: JSON.stringify(cleaned), updated_at: new Date().toISOString() },
+        { onConflict: "key" },
+      );
+      if (error) throw error;
+      setPlaylist(cleaned);
+      return true;
+    } catch (error) {
+      console.error("BGM 재생목록 저장 오류:", error);
+      alert(`BGM 재생목록을 저장하지 못했습니다.\n${error.message}`);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <aside className="global-bgm-popup" aria-label="BGM 플레이어">
+      <div className="global-bgm-popup-bar">
+        <span>MY BGM</span>
+        <span>♪</span>
+      </div>
+      <MiniBgmPlayer playlist={playlist} />
+      {isAdmin && (
+        <BgmPlaylistManager playlist={playlist} onSave={savePlaylist} saving={saving} />
+      )}
+    </aside>
+  );
+}
+
 function ArchiveLayout({
   isAdmin = false,
 
   // 현재 선택된 탭
-  // "photos" | "videos" | "posts"
+  // "photos" | "videos" | "posts" | "diary"
   activeTab = "photos",
 
   // 각 페이지가 자기 검색 state를 넘겨줌
@@ -812,15 +928,19 @@ function ArchiveLayout({
   // =========================
 
   function goPhotos() {
-    window.location.href = isAdmin ? "/admin" : "/";
+    navigateInsideArchive(isAdmin ? "/admin" : "/");
   }
 
   function goVideos() {
-    window.location.href = isAdmin ? "/admin/videos" : "/videos";
+    navigateInsideArchive(isAdmin ? "/admin/videos" : "/videos");
   }
 
   function goPosts() {
-    window.location.href = "/admin/posts";
+    navigateInsideArchive(isAdmin ? "/admin/posts" : "/posts");
+  }
+
+  function goDiary() {
+    navigateInsideArchive(isAdmin ? "/admin/diary" : "/diary");
   }
 
   // =========================
@@ -965,15 +1085,6 @@ function ArchiveLayout({
               </div>
             )}
 
-            <MiniBgmPlayer playlist={bgmPlaylist} />
-
-            {isAdmin && (
-              <BgmPlaylistManager
-                playlist={bgmPlaylist}
-                onSave={saveBgmPlaylist}
-                saving={savingBgmPlaylist}
-              />
-            )}
           </aside>
 
           {/* =========================
@@ -1020,6 +1131,16 @@ function ArchiveLayout({
                 onClick={goVideos}
               >
                 동영상
+              </button>
+
+              <button
+                type="button"
+                className={`archive-side-tab ${
+                  activeTab === "diary" ? "active" : ""
+                }`}
+                onClick={goDiary}
+              >
+                다이어리
               </button>
 
               {isAdmin && (
