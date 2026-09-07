@@ -7,6 +7,8 @@ import Posts from "./Posts";
 import Diary from "./Diary";
 import ArchiveImport from "./ArchiveImport";
 import PhotoManager from "./PhotoManager";
+import Guestbook from "./Guestbook";
+import ReportManager from "./ReportManager";
 
 function AdminRoute() {
   const [session, setSession] = useState(null);
@@ -45,7 +47,9 @@ function AdminRoute() {
   if (path === "/admin/videos") return <Videos isAdmin={true} />;
   if (path === "/admin/posts") return <Posts isAdmin={true} />;
   if (path === "/admin/diary") return <Diary isAdmin={true} />;
+  if (path === "/admin/guestbook") return <Guestbook isAdmin={true} />;
   if (path === "/admin/photos/manage") return <PhotoManager />;
+  if (path === "/admin/reports") return <ReportManager />;
 
   return <AdminHome />;
 }

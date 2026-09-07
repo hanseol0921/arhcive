@@ -1,0 +1,23 @@
+body:has(.report-manager-page) { overflow-y: auto; background: #f4f1e9; }
+.report-manager-page { width: min(980px, calc(100% - 32px)); margin: 28px auto 70px; color: #55514a; }
+.report-manager-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+.report-manager-header button, .report-manager-tabs button, .report-manager-actions button, .report-manager-actions a { min-height: 32px; padding: 0 11px; border: 1px solid #c9c2b7; border-radius: 5px; background: #fff; color: #625e57; font-size: 9px; cursor: pointer; text-decoration: none; }
+.report-manager-header h1 { margin: 0 0 5px; font-size: 27px; font-weight: 500; }
+.report-manager-header p { margin: 0; color: #8d877d; font-size: 10px; }
+.report-manager-tabs { display: flex; gap: 6px; margin-bottom: 13px; }
+.report-manager-tabs button.active { border-color: #58b7d0; background: #63c6df; color: #fff; }
+.report-manager-list { display: grid; gap: 10px; }
+.report-manager-card { display: grid; grid-template-columns: 145px minmax(0, 1fr); gap: 15px; padding: 14px; border: 1px solid #ded9d0; border-radius: 9px; background: #fff; }
+.report-manager-card.resolved { opacity: .62; }
+.report-manager-preview { width: 100%; aspect-ratio: 4 / 3; overflow: hidden; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: #eeeae0; color: #aaa398; font-size: 8px; }
+.report-manager-preview img { width: 100%; height: 100%; object-fit: cover; }
+.report-manager-meta { display: flex; align-items: center; gap: 8px; }
+.report-manager-meta strong { color: #1597ba; font-size: 10px; }
+.report-manager-meta span, .report-manager-target { color: #999288; font-size: 8px; }
+.report-manager-target { margin-top: 5px; }
+.report-manager-body p { margin: 12px 0; min-height: 35px; white-space: pre-wrap; font-size: 12px; line-height: 1.7; }
+.report-manager-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+.report-manager-actions a { display: inline-flex; align-items: center; }
+.report-manager-actions .delete { color: #b05a5a; border-color: #d8a2a2; }
+.report-manager-empty { padding: 80px 0; color: #999288; font-size: 11px; text-align: center; }
+@media(max-width:600px){.report-manager-card{grid-template-columns:80px minmax(0,1fr);gap:10px;padding:10px}.report-manager-header{flex-direction:column}.report-manager-tabs{overflow-x:auto}.report-manager-tabs button{flex:0 0 auto}}

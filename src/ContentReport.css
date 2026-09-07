@@ -1,0 +1,18 @@
+.content-report-backdrop { position: fixed; inset: 0; z-index: 15000; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(25,25,25,.58); }
+.content-report-dialog { position: relative; width: min(410px, 94vw); padding: 25px; border: 1px solid #c9c2b7; border-radius: 10px; background: #fff; box-shadow: 0 16px 50px rgba(0,0,0,.25); color: #625e57; text-align: left; }
+.content-report-close { position: absolute; top: 8px; right: 11px; border: 0; background: transparent; color: #666158; font-size: 24px; cursor: pointer; }
+.content-report-dialog small { color: #aaa398; font-size: 7px; letter-spacing: 2px; }
+.content-report-dialog h2 { margin: 5px 32px 14px 0; font-size: 20px; font-weight: 500; }
+.content-report-preview { width: 74px; aspect-ratio: 3 / 4; display: block; margin-bottom: 8px; border-radius: 5px; object-fit: cover; background: #eeeae0; }
+.content-report-target { margin-bottom: 14px; color: #8d877d; font-size: 9px; }
+.content-report-dialog label { display: block; margin-bottom: 6px; font-size: 10px; }
+.content-report-dialog textarea { width: 100%; min-height: 125px; padding: 10px; resize: vertical; border: 1px solid #d7d1c7; border-radius: 5px; color: #55514a; font: inherit; font-size: 11px; line-height: 1.65; outline: none; }
+.content-report-dialog textarea:focus { border-color: #63c6df; box-shadow: 0 0 0 2px rgba(99,198,223,.13); }
+.content-report-footer { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 9px; }
+.content-report-footer span { color: #aaa398; font-size: 8px; }
+.content-report-footer button, .content-report-done button { min-height: 31px; padding: 0 12px; border: 1px solid #58b7d0; border-radius: 4px; background: #63c6df; color: #fff; font-size: 9px; cursor: pointer; }
+.content-report-footer button:disabled { opacity: .5; cursor: default; }
+.content-report-done { padding: 20px 0 5px; text-align: center; }
+.content-report-done strong { font-size: 14px; }
+.content-report-done p { margin: 9px 0 17px; color: #8d877d; font-size: 10px; }
+@media (max-width: 600px) { .content-report-dialog { padding: 21px 16px 17px; } .content-report-dialog textarea { min-height: 105px; } }

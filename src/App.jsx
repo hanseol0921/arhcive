@@ -5,6 +5,7 @@ import AdminRoute from "./AdminRoute";
 import Posts from "./Posts";
 import Videos from "./Videos";
 import Diary from "./Diary";
+import Guestbook from "./Guestbook";
 import { GlobalBgmPlayer } from "./ArchiveLayout";
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
   else if (path === "/videos") page = <Videos isAdmin={false} />;
   else if (path === "/posts") page = <Posts isAdmin={false} />;
   else if (path === "/diary") page = <Diary isAdmin={false} />;
+  else if (path === "/guestbook") page = <Guestbook isAdmin={false} />;
   else page = <Archive isAdmin={false} />;
 
   return (

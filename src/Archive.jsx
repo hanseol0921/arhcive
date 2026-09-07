@@ -4,6 +4,7 @@ import ArchiveLayout from "./ArchiveLayout";
 import ArchiveFilters from "./ArchiveFilters";
 import "./App.css";
 import TagPicker from "./TagPicker";
+import ContentReport from "./ContentReport";
 
 function Archive({ isAdmin = false }) {
   const isMobileDevice =
@@ -90,6 +91,7 @@ function Archive({ isAdmin = false }) {
   const [cropPosition, setCropPosition] = useState("50% 50%");
 
   const [saving, setSaving] = useState(false);
+  const [reportTarget, setReportTarget] = useState(null);
 
   // =========================
   // 크롭 드래그
@@ -1354,6 +1356,23 @@ const hairColorAliases = {
               ×
             </button>
 
+            {!editMode && !isAdmin && (
+              <details className="content-detail-menu">
+                <summary aria-label="사진 설정">⋮</summary>
+                <div>
+                  <button type="button" onClick={() => setReportTarget({
+                    type: "photo",
+                    id: selectedPhoto.id,
+                    label: `${selectedPhoto.date || ""} 사진`.trim(),
+                    previewUrl: selectedPhoto.thumbnail_url || selectedPhoto.image_url,
+                    pageUrl: selectedPhoto.weverse_url || window.location.href,
+                  })}>
+                    제보하기 · 수정 요청
+                  </button>
+                </div>
+              </details>
+            )}
+
             {/* 큰 사진 */}
 
             <div className="modal-image">
@@ -1632,6 +1651,7 @@ const hairColorAliases = {
           </div>
         </div>
       )}
+      <ContentReport target={reportTarget} onClose={() => setReportTarget(null)} />
     </>
   );
 }

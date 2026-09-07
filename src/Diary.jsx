@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import ArchiveLayout from "./ArchiveLayout";
 import "./Diary.css";
+import ContentReport from "./ContentReport";
+import TagPicker from "./TagPicker";
 
 function Diary({ isAdmin = false }) {
   const [posts, setPosts] = useState([]);
@@ -10,9 +12,25 @@ function Diary({ isAdmin = false }) {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [profileImage, setProfileImage] = useState("");
+  const [editMode, setEditMode] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCoverId, setEditCoverId] = useState("");
+  const [editCoverPosition, setEditCoverPosition] = useState("50% 50%");
+  const [savingDiary, setSavingDiary] = useState(false);
+  const [editTags, setEditTags] = useState("");
+  const cropRef = useRef(null);
+  const cropDragRef = useRef(null);
+  const [reportTarget, setReportTarget] = useState(null);
 
   useEffect(() => {
     loadDiary();
+    supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "profile_image")
+      .maybeSingle()
+      .then(({ data }) => setProfileImage(data?.value || ""));
   }, []);
 
   useEffect(() => {
@@ -115,6 +133,31 @@ function Diary({ isAdmin = false }) {
     return getPostVideos(post.id)[0]?.thumbnail_url || "";
   }
 
+  function getCoverPosition(post) {
+    return post.diary_cover_position || "50% 50%";
+  }
+
+  function getTextPreview(post) {
+    if (post.content?.trim()) return post.content.trim();
+    if (!Array.isArray(post.content_blocks)) return "내용을 확인해보세요.";
+    return post.content_blocks
+      .filter((block) => block?.type === "text" && block.content)
+      .map((block) => block.content.trim())
+      .filter(Boolean)
+      .join("\n\n") || "내용을 확인해보세요.";
+  }
+
+  function formatDiaryDate(post) {
+    const date = String(post.date || "").replaceAll("-", ".");
+    if (!post.posted_at) return { date, time: "" };
+    const time = new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(post.posted_at));
+    return { date, time };
+  }
+
   function getPostMedia(postId) {
     const photoMedia = getPostPhotos(postId).map((photo) => ({
       ...photo,
@@ -135,13 +178,92 @@ function Diary({ isAdmin = false }) {
     if (!keyword) return posts;
 
     return posts.filter((post) =>
-      [post.diary_title, post.content, post.date, post.author]
+      [post.diary_title, post.content, post.date, post.author, ...(Array.isArray(post.tags) ? post.tags : [])]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(keyword)),
     );
   }, [posts, search]);
 
   const selectedMedia = selectedPost ? getPostMedia(selectedPost.id) : [];
+
+  function openDiaryEdit() {
+    setEditTitle(selectedPost.diary_title || "");
+    setEditCoverId(
+      selectedPost.diary_cover_photo_id
+        ? String(selectedPost.diary_cover_photo_id)
+        : String(getPostPhotos(selectedPost.id)[0]?.id || ""),
+    );
+    setEditCoverPosition(selectedPost.diary_cover_position || "50% 50%");
+    setEditTags(Array.isArray(selectedPost.tags) ? selectedPost.tags.join(", ") : "");
+    setEditMode(true);
+  }
+
+  function parsePosition(position) {
+    const [rawX = "50%", rawY = "50%"] = String(position || "50% 50%").split(/\s+/);
+    return {
+      x: Number.parseFloat(rawX) || 50,
+      y: Number.parseFloat(rawY) || 50,
+    };
+  }
+
+  function startCoverDrag(event) {
+    const { x, y } = parsePosition(editCoverPosition);
+    cropDragRef.current = { clientX: event.clientX, clientY: event.clientY, x, y };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }
+
+  function moveCoverDrag(event) {
+    if (!cropDragRef.current || !cropRef.current) return;
+    const rect = cropRef.current.getBoundingClientRect();
+    const nextX = Math.max(0, Math.min(100,
+      cropDragRef.current.x - ((event.clientX - cropDragRef.current.clientX) / rect.width) * 100,
+    ));
+    const nextY = Math.max(0, Math.min(100,
+      cropDragRef.current.y - ((event.clientY - cropDragRef.current.clientY) / rect.height) * 100,
+    ));
+    setEditCoverPosition(`${nextX}% ${nextY}%`);
+  }
+
+  function stopCoverDrag(event) {
+    cropDragRef.current = null;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+  }
+
+  async function saveDiarySettings() {
+    if (!editTitle.trim()) {
+      alert("다이어리 제목을 입력해주세요.");
+      return;
+    }
+    if (!editCoverId) {
+      alert("본문 사진을 눌러 대표 이미지를 선택해주세요.");
+      return;
+    }
+
+    setSavingDiary(true);
+    const { data, error } = await supabase
+      .from("weverse_posts")
+      .update({
+        diary_title: editTitle.trim(),
+        diary_cover_photo_id: editCoverId,
+        diary_cover_position: editCoverPosition,
+        tags: editTags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+      })
+      .eq("id", selectedPost.id)
+      .select()
+      .single();
+    setSavingDiary(false);
+
+    if (error) {
+      alert(`다이어리 설정을 저장하지 못했습니다.\n${error.message}`);
+      return;
+    }
+    setPosts((current) => current.map((post) => String(post.id) === String(data.id) ? data : post));
+    setSelectedPost(data);
+    setEditMode(false);
+  }
 
   function renderDiaryContent(post, media) {
     const blocks = Array.isArray(post.content_blocks) ? post.content_blocks : [];
@@ -159,20 +281,19 @@ function Diary({ isAdmin = false }) {
           : null;
       if (!item) return null;
       return (
-        <div className="diary-modal-media" key={`${block.type}-${blockIndex}`}>
+        <div
+          className={`diary-modal-media ${editMode && block.type === "photo" ? "diary-cover-selectable" : ""} ${String(editCoverId) === String(item.id) ? "selected-cover" : ""}`}
+          key={`${block.type}-${blockIndex}`}
+          onClick={() => {
+            if (editMode && block.type === "photo") setEditCoverId(String(item.id));
+          }}
+        >
           {block.type === "photo" ? (
             <img
-              src={item.thumbnail_url || item.image_url}
-              data-original-src={item.image_url}
+              src={item.image_url}
               alt=""
               loading="lazy"
               decoding="async"
-              onError={(event) => {
-                const original = event.currentTarget.dataset.originalSrc;
-                if (original && event.currentTarget.src !== original) {
-                  event.currentTarget.src = original;
-                }
-              }}
             />
           ) : (
             <video src={item.video_url} poster={item.thumbnail_url || undefined} controls preload="metadata" />
@@ -208,9 +329,18 @@ function Diary({ isAdmin = false }) {
               >
                 <div className="diary-card-cover">
                   {cover ? (
-                    <img src={cover} alt="" loading="lazy" />
+                    <img
+                      src={cover}
+                      alt=""
+                      loading="lazy"
+                      style={{ objectPosition: getCoverPosition(post) }}
+                    />
                   ) : (
-                    <span>NO IMAGE</span>
+                    <div className="diary-card-text-cover">
+                      <small>TEXT DIARY</small>
+                      <p>{getTextPreview(post)}</p>
+                      <span>READ MORE</span>
+                    </div>
                   )}
                 </div>
                 <div className="diary-card-title">
@@ -235,9 +365,92 @@ function Diary({ isAdmin = false }) {
             </button>
 
             <header className="diary-modal-header">
-              <small>{selectedPost.date}</small>
               <h2>{selectedPost.diary_title || "제목 없는 다이어리"}</h2>
+              <div className="diary-modal-profile-row">
+                <div className="diary-modal-profile">
+                  {profileImage ? <img src={profileImage} alt="" /> : <span>PROFILE</span>}
+                </div>
+                <div className="diary-modal-profile-info">
+                  <strong>{selectedPost.author || "리우"}</strong>
+                  <div className="diary-modal-date-time">
+                    <span>{formatDiaryDate(selectedPost).date}</span>
+                    {formatDiaryDate(selectedPost).time && (
+                      <span>{formatDiaryDate(selectedPost).time}</span>
+                    )}
+                  </div>
+                </div>
+                <details className="entry-more-menu">
+                  <summary aria-label="다이어리 설정">⋮</summary>
+                  <div>
+                    {selectedPost.weverse_url && (
+                      <a href={selectedPost.weverse_url} target="_blank" rel="noreferrer">위버스 바로가기</a>
+                    )}
+                    {isAdmin && (
+                      <button type="button" onClick={openDiaryEdit}>
+                        수정
+                      </button>
+                    )}
+                    <button type="button" onClick={() => setReportTarget({
+                      type: "diary",
+                      id: selectedPost.id,
+                      label: `${selectedPost.date || ""} ${selectedPost.diary_title || "다이어리"}`.trim(),
+                      previewUrl: getCover(selectedPost),
+                      pageUrl: selectedPost.weverse_url || window.location.href,
+                    })}>
+                      오류 제보 · 수정 요청
+                    </button>
+                  </div>
+                </details>
+              </div>
             </header>
+
+            {editMode && (
+              <section className="diary-settings-editor">
+                <label>
+                  다이어리 제목
+                  <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} />
+                </label>
+
+                <label className="diary-tags-editor">
+                  다이어리 태그
+                  <TagPicker value={editTags} onChange={setEditTags} />
+                </label>
+
+                {(() => {
+                  const cover = getPostPhotos(selectedPost.id).find(
+                    (photo) => String(photo.id) === String(editCoverId),
+                  );
+                  return cover ? (
+                    <>
+                      <div
+                        ref={cropRef}
+                        className="diary-drag-crop"
+                        onPointerDown={startCoverDrag}
+                        onPointerMove={moveCoverDrag}
+                        onPointerUp={stopCoverDrag}
+                        onPointerCancel={stopCoverDrag}
+                      >
+                        <img
+                          src={cover.thumbnail_url || cover.image_url}
+                          alt="대표 이미지 크롭"
+                          draggable={false}
+                          style={{ objectPosition: editCoverPosition }}
+                        />
+                        <span>사진을 잡고 움직여 위치를 맞춰주세요</span>
+                      </div>
+                      <p>아래 본문 사진을 누르면 대표 이미지가 바뀝니다.</p>
+                    </>
+                  ) : <p>아래 본문 사진을 눌러 대표 이미지를 선택해주세요.</p>;
+                })()}
+
+                <div className="diary-settings-actions">
+                  <button type="button" onClick={() => setEditMode(false)} disabled={savingDiary}>취소</button>
+                  <button type="button" onClick={saveDiarySettings} disabled={savingDiary}>
+                    {savingDiary ? "저장 중…" : "저장"}
+                  </button>
+                </div>
+              </section>
+            )}
 
             {Array.isArray(selectedPost.content_blocks) && selectedPost.content_blocks.length ? (
               <div className="diary-modal-blocks">{renderDiaryContent(selectedPost, selectedMedia)}</div>
@@ -247,20 +460,14 @@ function Diary({ isAdmin = false }) {
               <div className="diary-modal-media">
                 {selectedMedia.map((item) =>
                   item.mediaKind === "photo" ? (
-                    <img
+                    <button
+                      type="button"
                       key={`photo-${item.id}`}
-                      src={item.thumbnail_url || item.image_url}
-                      data-original-src={item.image_url}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      onError={(event) => {
-                        const original = event.currentTarget.dataset.originalSrc;
-                        if (original && event.currentTarget.src !== original) {
-                          event.currentTarget.src = original;
-                        }
-                      }}
-                    />
+                      className={`diary-fallback-photo ${editMode ? "diary-cover-selectable" : ""} ${String(editCoverId) === String(item.id) ? "selected-cover" : ""}`}
+                      onClick={() => { if (editMode) setEditCoverId(String(item.id)); }}
+                    >
+                      <img src={item.image_url} alt="" loading="lazy" decoding="async" />
+                    </button>
                   ) : (
                     <video
                       key={`video-${item.id}`}
@@ -275,27 +482,16 @@ function Diary({ isAdmin = false }) {
             )}
             </>}
 
-            <footer className="diary-modal-links">
-              {selectedPost.weverse_url && (
-                <a href={selectedPost.weverse_url} target="_blank" rel="noreferrer">
-                  위버스에서 보기 ↗
-                </a>
-              )}
+            {Array.isArray(selectedPost.tags) && selectedPost.tags.length > 0 && (
+              <div className="entry-hashtags diary-bottom-tags">
+                {selectedPost.tags.map((tag) => <span key={tag}>#{tag}</span>)}
+              </div>
+            )}
 
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.location.href = `/admin/posts?post=${selectedPost.id}`;
-                  }}
-                >
-                  게시글 수정
-                </button>
-              )}
-            </footer>
           </div>
         </div>
       )}
+      <ContentReport target={reportTarget} onClose={() => setReportTarget(null)} />
     </>
   );
 }

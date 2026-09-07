@@ -3,6 +3,8 @@ import { supabase } from "./supabaseClient";
 import ArchiveLayout from "./ArchiveLayout";
 import "./App.css";
 import "./Diary.css";
+import TagPicker from "./TagPicker";
+import ContentReport from "./ContentReport";
 
 function Posts({ isAdmin = false }) {
   const [posts, setPosts] = useState([]);
@@ -34,11 +36,15 @@ function Posts({ isAdmin = false }) {
   const [editIsDiary, setEditIsDiary] = useState(false);
   const [editDiaryTitle, setEditDiaryTitle] = useState("");
   const [editDiaryCoverPhotoId, setEditDiaryCoverPhotoId] = useState("");
+  const [editDiaryCoverPosition, setEditDiaryCoverPosition] = useState("50% 50%");
+  const [editPostTags, setEditPostTags] = useState("");
 
   const [postSaving, setPostSaving] = useState(false);
   const [editMedia, setEditMedia] = useState([]);
   const [selectedPostIds, setSelectedPostIds] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const requestedEditOpenedRef = useRef(false);
+  const [reportTarget, setReportTarget] = useState(null);
 
   // =========================
   // 데이터 불러오기
@@ -47,6 +53,27 @@ function Posts({ isAdmin = false }) {
   useEffect(() => {
     loadPosts();
   }, []);
+
+  // 다이어리 상세의 수정 버튼으로 들어오면 미디어까지 로드된 뒤 바로 수정 화면을 연다.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedPostId = params.get("post");
+    const shouldOpenEdit = params.get("edit") === "1";
+
+    if (!isAdmin || !shouldOpenEdit || !requestedPostId || requestedEditOpenedRef.current) {
+      return;
+    }
+
+    const requestedPost = posts.find(
+      (post) => String(post.id) === String(requestedPostId),
+    );
+
+    if (!requestedPost || loading) return;
+
+    requestedEditOpenedRef.current = true;
+    setSelectedPost(requestedPost);
+    openPostEdit(requestedPost);
+  }, [isAdmin, loading, posts, photos, videos]);
 
   async function loadAllLinkedMedia(tableName) {
     const pageSize = 1000;
@@ -302,6 +329,8 @@ function Posts({ isAdmin = false }) {
     setEditDiaryCoverPhotoId(
       post.diary_cover_photo_id ? String(post.diary_cover_photo_id) : ""
     );
+    setEditDiaryCoverPosition(post.diary_cover_position || "50% 50%");
+    setEditPostTags(Array.isArray(post.tags) ? post.tags.join(", ") : "");
 
     const media = getPostMedia(post.id);
 
@@ -575,11 +604,6 @@ function handleEditCropEnd(
     return;
   }
 
-  if (editIsDiary && !editDiaryTitle.trim()) {
-    alert("다이어리 제목을 입력해주세요.");
-    return;
-  }
-
   setPostSaving(true);
 
   try {
@@ -630,6 +654,13 @@ function handleEditCropEnd(
           editIsDiary && editDiaryCoverPhotoId
             ? String(editDiaryCoverPhotoId)
             : null,
+        diary_cover_position: editIsDiary
+          ? editDiaryCoverPosition
+          : "50% 50%",
+        tags: editPostTags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
       })
       .eq(
         "id",
@@ -1271,7 +1302,7 @@ function handleEditCropEnd(
   const normalizedSearch = search.trim().toLowerCase();
   const filteredPosts = normalizedSearch
     ? posts.filter((post) =>
-        [post.content, post.author, post.date, post.diary_title]
+        [post.content, post.author, post.date, post.diary_title, ...(Array.isArray(post.tags) ? post.tags : [])]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(normalizedSearch)),
       )
@@ -1601,21 +1632,45 @@ function handleEditCropEnd(
 
                 </div>
 
-                {isAdmin && (
-                  <div className="post-admin-actions post-admin-actions-top">
-                    <button
-                      type="button"
-                      onClick={() => openPostEdit(selectedPost)}
-                    >
-                      수정
-                    </button>
+                <details className="post-entry-more-menu">
+                  <summary aria-label="게시글 설정">⋮</summary>
+                  <div className="post-entry-more-panel">
+                    {selectedPost.weverse_url && (
+                      <a href={selectedPost.weverse_url} target="_blank" rel="noreferrer">
+                        위버스 바로가기
+                      </a>
+                    )}
+                    {isAdmin && (
+                      <>
+                        <button type="button" onClick={() => openPostEdit(selectedPost)}>
+                          수정
+                        </button>
+                        <button
+                          type="button"
+                          className="post-entry-delete-button"
+                          onClick={() => handleDeletePost(selectedPost)}
+                        >
+                          삭제
+                        </button>
+                      </>
+                    )}
+                    {!isAdmin && (
+                      <button type="button" onClick={() => setReportTarget({
+                        type: "post",
+                        id: selectedPost.id,
+                        label: `${selectedPost.date || ""} ${selectedPost.author || "게시글"}`.trim(),
+                        previewUrl: selectedPhotos[0]?.thumbnail_url || selectedPhotos[0]?.image_url || null,
+                        pageUrl: selectedPost.weverse_url || window.location.href,
+                      })}>
+                        제보하기 · 다이어리 추천
+                      </button>
+                    )}
+                  </div>
+                </details>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePost(selectedPost)}
-                    >
-                      삭제
-                    </button>
+                {Array.isArray(selectedPost.tags) && selectedPost.tags.length > 0 && (
+                  <div className="entry-hashtags">
+                    {selectedPost.tags.map((tag) => <span key={tag}>#{tag}</span>)}
                   </div>
                 )}
 
@@ -1698,25 +1753,6 @@ function handleEditCropEnd(
                 )}
                 </>}
 
-                {/* 위버스 링크 */}
-
-                {selectedPost.weverse_url && (
-                  <a
-                    className="post-modal-weverse"
-                    href={
-                      selectedPost.weverse_url
-                    }
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) =>
-                      e.stopPropagation()
-                    }
-                  >
-                    위버스에서 보기 ↗
-                  </a>
-                )}
-
-
               </>
             ) : (
 
@@ -1796,6 +1832,9 @@ function handleEditCropEnd(
                   }
                 />
 
+                <label>게시글 해시태그</label>
+                <TagPicker value={editPostTags} onChange={setEditPostTags} />
+
                 <label>
                   위버스 링크
                 </label>
@@ -1823,60 +1862,9 @@ function handleEditCropEnd(
                   </label>
 
                   {editIsDiary && (
-                    <>
-                      <div className="diary-save-notice">
-                        제목과 대표 사진을 정한 뒤 상세창 맨 아래의 저장 버튼을 눌러야 다이어리에 등록됩니다.
-                      </div>
-                      <label>다이어리 제목</label>
-                      <input
-                        type="text"
-                        value={editDiaryTitle}
-                        onChange={(e) => setEditDiaryTitle(e.target.value)}
-                        placeholder="예: 도쿄 여행 1일 차"
-                      />
-
-                      <label>대표 사진</label>
-                      <div className="diary-cover-picker">
-                        {editMedia
-                          .filter(
-                            (item) =>
-                              item.mediaKind === "photo" && !item.deletePending,
-                          )
-                          .map((item, index) => (
-                            <button
-                              type="button"
-                              key={item.id}
-                              className={
-                                String(editDiaryCoverPhotoId) === String(item.id)
-                                  ? "selected"
-                                  : ""
-                              }
-                              onClick={() =>
-                                setEditDiaryCoverPhotoId(String(item.id))
-                              }
-                            >
-                              <img
-                                src={item.thumbnail_url || item.image_url}
-                                alt={`대표 사진 후보 ${index + 1}`}
-                              />
-                              <span>
-                                {String(editDiaryCoverPhotoId) === String(item.id)
-                                  ? "대표 사진"
-                                  : `사진 ${index + 1}`}
-                              </span>
-                            </button>
-                          ))}
-
-                        {editMedia.filter(
-                          (item) =>
-                            item.mediaKind === "photo" && !item.deletePending,
-                        ).length === 0 && (
-                          <div className="diary-cover-empty">
-                            대표로 선택할 사진이 없습니다.
-                          </div>
-                        )}
-                      </div>
-                    </>
+                    <div className="diary-save-notice">
+                      다이어리 제목·대표 이미지·크롭은 다이어리 상세의 ⋮ → 수정에서 설정할 수 있습니다.
+                    </div>
                   )}
                 </div>
 
@@ -2295,6 +2283,8 @@ function handleEditCropEnd(
         </div>
 
       )}
+
+      <ContentReport target={reportTarget} onClose={() => setReportTarget(null)} />
 
       {lightboxIndex >= 0 && selectedPhotos[lightboxIndex] && (
         <div

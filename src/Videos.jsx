@@ -4,12 +4,14 @@ import ArchiveLayout from "./ArchiveLayout";
 import ArchiveFilters from "./ArchiveFilters";
 import "./App.css";
 import TagPicker from "./TagPicker";
+import ContentReport from "./ContentReport";
 
 function Videos({ isAdmin = false }) {
   const [videos, setVideos] = useState([]);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
   const [thumbnailTime, setThumbnailTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [savingThumbnail, setSavingThumbnail] = useState(false);
@@ -623,6 +625,23 @@ function Videos({ isAdmin = false }) {
                       ×
                     </button>
 
+                    {!isAdmin && (
+                      <details className="content-detail-menu">
+                        <summary aria-label="동영상 설정">⋮</summary>
+                        <div>
+                          <button type="button" onClick={() => setReportTarget({
+                            type: "video",
+                            id: selectedVideo.id,
+                            label: `${getPost(selectedVideo)?.date || ""} 동영상`.trim(),
+                            previewUrl: selectedVideo.thumbnail_url || null,
+                            pageUrl: getPost(selectedVideo)?.weverse_url || window.location.href,
+                          })}>
+                            제보하기 · 수정 요청
+                          </button>
+                        </div>
+                      </details>
+                    )}
+
                     <div className="video-modal-player">
                       <video
                         ref={modalBackgroundRef}
@@ -806,6 +825,7 @@ function Videos({ isAdmin = false }) {
                   </div>
                 </div>
               )}
+              <ContentReport target={reportTarget} onClose={() => setReportTarget(null)} />
             </>
           );
 }

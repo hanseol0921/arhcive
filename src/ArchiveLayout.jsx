@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import "./App.css";
+import ContentReport from "./ContentReport";
 
 // 재생목록에 곡을 추가하려면 아래 배열에 같은 형식으로 한 줄씩 넣으면 됩니다.
 const DEFAULT_BGM_PLAYLIST = [
@@ -580,7 +581,7 @@ function ArchiveLayout({
   isAdmin = false,
 
   // 현재 선택된 탭
-  // "photos" | "videos" | "posts" | "diary"
+  // "photos" | "videos" | "posts" | "diary" | "guestbook"
   activeTab = "photos",
 
   // 각 페이지가 자기 검색 state를 넘겨줌
@@ -599,6 +600,44 @@ function ArchiveLayout({
   const [recentUpdateDate, setRecentUpdateDate] = useState("");
   const [bgmPlaylist, setBgmPlaylist] = useState(DEFAULT_BGM_PLAYLIST);
   const [savingBgmPlaylist, setSavingBgmPlaylist] = useState(false);
+  const [generalReportOpen, setGeneralReportOpen] = useState(false);
+
+  useEffect(() => {
+    const menuSelector = [
+      "details.entry-more-menu",
+      "details.post-entry-more-menu",
+      "details.content-detail-menu",
+    ].join(",");
+
+    function getOpenMenus() {
+      return [...document.querySelectorAll(menuSelector)].filter((menu) => menu.open);
+    }
+
+    function closeWhenClickingOutside(event) {
+      getOpenMenus().forEach((menu) => {
+        if (!menu.contains(event.target)) menu.open = false;
+      });
+    }
+
+    function closeAfterChoosingAction(event) {
+      const action = event.target.closest("a, button");
+      if (!action) return;
+
+      getOpenMenus().forEach((menu) => {
+        if (menu.contains(action)) {
+          // 항목의 원래 onClick이 먼저 실행된 뒤 메뉴를 닫는다.
+          window.setTimeout(() => { menu.open = false; }, 0);
+        }
+      });
+    }
+
+    document.addEventListener("pointerdown", closeWhenClickingOutside, true);
+    document.addEventListener("click", closeAfterChoosingAction, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeWhenClickingOutside, true);
+      document.removeEventListener("click", closeAfterChoosingAction, true);
+    };
+  }, []);
 
   async function saveBgmPlaylist(nextPlaylist) {
     setSavingBgmPlaylist(true);
@@ -943,6 +982,10 @@ function ArchiveLayout({
     navigateInsideArchive(isAdmin ? "/admin/diary" : "/diary");
   }
 
+  function goGuestbook() {
+    navigateInsideArchive(isAdmin ? "/admin/guestbook" : "/guestbook");
+  }
+
   // =========================
   // 화면
   // =========================
@@ -961,11 +1004,22 @@ function ArchiveLayout({
 
             <input
               type="text"
+              name={`archive_content_search_${activeTab}`}
+              autoComplete="one-time-code"
+              role="searchbox"
+              data-lpignore="true"
+              data-1p-ignore="true"
               placeholder={searchPlaceholder}
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
             />
           </div>
+
+          {!isAdmin && (
+            <button type="button" className="archive-report-button" onClick={() => setGeneralReportOpen(true)}>
+              자료 누락 제보
+            </button>
+          )}
 
           {/* 일반 사용자 */}
           {!isAdmin && (
@@ -1143,6 +1197,16 @@ function ArchiveLayout({
                 다이어리
               </button>
 
+              <button
+                type="button"
+                className={`archive-side-tab ${
+                  activeTab === "guestbook" ? "active" : ""
+                }`}
+                onClick={goGuestbook}
+              >
+                방명록
+              </button>
+
               {isAdmin && (
                 <button
                   type="button"
@@ -1159,6 +1223,11 @@ function ArchiveLayout({
                 <span>⌕</span>
                 <input
                   type="text"
+                  name={`archive_mobile_content_search_${activeTab}`}
+                  autoComplete="one-time-code"
+                  role="searchbox"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                   placeholder={searchPlaceholder}
                   value={search}
                   onChange={(e) => onSearchChange(e.target.value)}
@@ -1174,6 +1243,15 @@ function ArchiveLayout({
           </main>
         </div>
       </div>
+      <ContentReport
+        target={generalReportOpen ? {
+          type: "archive",
+          id: activeTab,
+          label: `${activeTab} 탭 자료 누락·수정 요청`,
+          pageUrl: window.location.href,
+        } : null}
+        onClose={() => setGeneralReportOpen(false)}
+      />
     </div>
   );
 }

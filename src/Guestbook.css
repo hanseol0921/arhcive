@@ -1,0 +1,121 @@
+.guestbook-page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #625e57;
+}
+
+.guestbook-write {
+  flex: 0 0 auto;
+  padding: 14px;
+  border: 1px solid #ded9d0;
+  border-radius: 9px;
+  background: #faf9f6;
+}
+
+.guestbook-write-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.guestbook-profile-choice { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.guestbook-profile-button { width: 45px; height: 45px; padding: 0; overflow: hidden; border: 1px solid #d7d1c7; border-radius: 50%; background: #eeeae0; color: #aaa398; font-size: 7px; cursor: pointer; }
+.guestbook-profile-button img { width: 100%; height: 100%; object-fit: cover; }
+.guestbook-profile-choice > div { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.guestbook-profile-select,
+.guestbook-profile-remove { padding: 0; border: 0; background: transparent; color: #777168; font-size: 9px; text-decoration: underline; cursor: pointer; }
+.guestbook-profile-remove { color: #aaa398; font-size: 8px; }
+.guestbook-write input,
+.guestbook-write textarea,
+.guestbook-edit-form input,
+.guestbook-edit-form textarea,
+.guestbook-delete-form input {
+  width: 100%;
+  border: 1px solid #d7d1c7;
+  border-radius: 5px;
+  background: #fff;
+  color: #55514a;
+  font: inherit;
+  outline: none;
+}
+.guestbook-write input { height: 31px; padding: 0 9px; font-size: 10px; }
+.guestbook-write textarea { height: 68px; margin-top: 7px; padding: 9px; resize: vertical; font-size: 11px; line-height: 1.6; }
+.guestbook-write input:focus,
+.guestbook-write textarea:focus,
+.guestbook-edit-form input:focus,
+.guestbook-edit-form textarea:focus,
+.guestbook-delete-form input:focus { border-color: #7fc7da; box-shadow: 0 0 0 2px rgba(99, 198, 223, .13); }
+.guestbook-secret-input {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
+.guestbook-write-footer { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 7px; }
+.guestbook-write-footer span { color: #aaa398; font-size: 8px; }
+.guestbook-write-footer button,
+.guestbook-edit-form button,
+.guestbook-delete-form button {
+  min-height: 28px;
+  padding: 0 11px;
+  border: 1px solid #c9c2b7;
+  border-radius: 4px;
+  background: #fff;
+  color: #625e57;
+  font-size: 9px;
+  cursor: pointer;
+}
+.guestbook-write-footer button { border-color: #58b7d0; background: #63c6df; color: #fff; font-weight: 700; }
+button:disabled { cursor: default; opacity: .55; }
+.guestbook-message { flex: 0 0 auto; padding: 7px 9px; border: 1px solid #e2ddd4; background: #fffdf8; font-size: 9px; }
+
+.guestbook-list { flex: 1; min-height: 0; overflow-y: auto; padding-right: 5px; }
+.guestbook-entry { position: relative; margin-bottom: 9px; padding: 13px 14px 12px 92px; border: 1px solid #ded9d0; border-radius: 8px; background: #fff; }
+.guestbook-entry-number { position: absolute; top: 14px; left: 11px; color: #aaa398; font-size: 8px; }
+.guestbook-entry-profile { position: absolute; top: 34px; left: 13px; width: 62px; height: 62px; border: 1px solid #ded9d0; border-radius: 5px; object-fit: cover; background: #eeeae0; }
+.guestbook-entry-profile-empty { display: flex; align-items: center; justify-content: center; color: #aaa398; font-size: 10px; }
+.guestbook-entry header { display: flex; align-items: baseline; gap: 7px; padding-bottom: 8px; border-bottom: 1px dashed #ded9d0; }
+.guestbook-entry header strong { color: #55514a; font-size: 11px; }
+.guestbook-entry header time,
+.guestbook-entry header small { color: #aaa398; font-size: 8px; font-weight: normal; }
+.guestbook-entry p { min-height: 34px; margin: 11px 0 7px; color: #625e57; font-size: 11px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; }
+.guestbook-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.guestbook-actions button { padding: 0; border: 0; background: transparent; color: #999288; font-size: 8px; text-decoration: underline; cursor: pointer; }
+.guestbook-edit-form { display: grid; gap: 7px; margin-top: 10px; }
+.guestbook-edit-form textarea { min-height: 72px; padding: 8px; resize: vertical; font-size: 11px; line-height: 1.6; }
+.guestbook-edit-form input,
+.guestbook-delete-form input { height: 30px; padding: 0 8px; font-size: 9px; }
+.guestbook-edit-form > div,
+.guestbook-delete-form { display: flex; justify-content: flex-end; gap: 6px; }
+.guestbook-delete-form { align-items: center; margin-top: 9px; }
+.guestbook-delete-form input { max-width: 180px; }
+.guestbook-delete-backdrop { position: fixed; inset: 0; z-index: 2400; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(30, 30, 30, .55); }
+.guestbook-delete-dialog { position: relative; width: min(330px, 90vw); padding: 20px; border: 1px solid #c9c2b7; border-radius: 9px; background: #fff; box-shadow: 0 14px 45px rgba(0, 0, 0, .22); color: #625e57; }
+.guestbook-delete-dialog strong { display: block; font-size: 13px; }
+.guestbook-delete-dialog p { margin: 7px 0 13px; color: #8d877d; font-size: 10px; }
+.guestbook-delete-dialog > .guestbook-secret-input { width: 100%; height: 34px; padding: 0 9px; border: 1px solid #d7d1c7; border-radius: 5px; outline: none; font-size: 11px; }
+.guestbook-delete-dialog > div { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
+.guestbook-delete-dialog button { min-height: 29px; padding: 0 11px; border: 1px solid #c9c2b7; border-radius: 4px; background: #fff; color: #625e57; font-size: 9px; cursor: pointer; }
+.guestbook-delete-dialog button[type="submit"] { border-color: #c27676; color: #a34f4f; }
+.guestbook-autofill-trap { position: absolute !important; width: 1px !important; height: 1px !important; left: -9999px !important; opacity: 0 !important; pointer-events: none !important; }
+.guestbook-empty { padding: 70px 0; color: #aaa398; font-size: 10px; text-align: center; }
+.guestbook-picker-backdrop { position: fixed; inset: 0; z-index: 2200; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(30, 30, 30, .55); }
+.guestbook-picker { width: min(620px, 92vw); height: min(680px, 86vh); display: flex; flex-direction: column; padding: 16px; border: 1px solid #c9c2b7; border-radius: 10px; background: #fff; box-shadow: 0 14px 45px rgba(0, 0, 0, .22); }
+.guestbook-picker-header { display: flex; align-items: center; justify-content: space-between; color: #625e57; font-size: 12px; }
+.guestbook-picker-header button { border: 0; background: transparent; color: #777168; font-size: 22px; cursor: pointer; }
+.guestbook-picker-search { flex: 0 0 auto; width: 100%; height: 34px; margin: 10px 0; padding: 0 10px; border: 1px solid #d7d1c7; border-radius: 5px; outline: none; font-size: 10px; }
+.guestbook-picker-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-content: start; gap: 3px; overflow-y: auto; }
+.guestbook-picker-grid button { aspect-ratio: 3 / 4; padding: 0; overflow: hidden; border: 2px solid transparent; background: #eeeae0; cursor: pointer; }
+.guestbook-picker-grid button.selected { border-color: #11a7d1; }
+.guestbook-picker-grid img { width: 100%; height: 100%; object-fit: cover; }
+.guestbook-picker-empty { grid-column: 1 / -1; padding: 70px 0; color: #aaa398; font-size: 10px; text-align: center; }
+
+@media (max-width: 700px) {
+  .guestbook-page { gap: 8px; }
+  .guestbook-write { padding: 9px; }
+  .guestbook-write-fields { grid-template-columns: 1fr; gap: 5px; }
+  .guestbook-write textarea { height: 60px; }
+  .guestbook-entry { padding: 11px 10px; }
+  .guestbook-entry-number { position: static; margin-bottom: 5px; }
+  .guestbook-entry-profile { position: static; float: left; width: 48px; height: 48px; margin: 0 9px 6px 0; }
+  .guestbook-entry header { flex-wrap: wrap; }
+  .guestbook-delete-form { flex-wrap: wrap; }
+  .guestbook-picker-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

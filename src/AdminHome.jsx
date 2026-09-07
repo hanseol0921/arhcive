@@ -20,6 +20,14 @@ function AdminHome() {
         >
           태그 관리
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            window.location.href = "/admin/reports";
+          }}
+        >
+          제보함
+        </button>
       </div>
 
       <Archive isAdmin={true} />
