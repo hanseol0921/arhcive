@@ -28,6 +28,14 @@ function AdminHome() {
         >
           제보함
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            window.location.href = "/admin/scraper";
+          }}
+        >
+          위버스 게시글 가져오기
+        </button>
       </div>
 
       <Archive isAdmin={true} />
