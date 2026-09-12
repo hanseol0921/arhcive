@@ -5,6 +5,7 @@ import ArchiveFilters from "./ArchiveFilters";
 import "./App.css";
 import TagPicker from "./TagPicker";
 import ContentReport from "./ContentReport";
+import { deleteFromR2, getR2Key } from "./r2Storage";
 
 function Archive({ isAdmin = false }) {
   const isMobileDevice =
@@ -15,6 +16,7 @@ function Archive({ isAdmin = false }) {
   const [hairColorFilter, setHairColorFilter] = useState("전체");
   const [search, setSearch] = useState("");
   const [photos, setPhotos] = useState([]);
+  const [photoPostTimes, setPhotoPostTimes] = useState({});
   const [copyNotice, setCopyNotice] = useState("");
   const copyNoticeTimerRef = useRef(null);
 
@@ -204,6 +206,42 @@ async function getPhotoPost(photo) {
       }
     }
 
+    // 같은 날짜에 여러 게시글이 있을 때 실제 위버스 게시 시각으로 정렬하기 위해
+    // 사진뿐 아니라 연결된 게시글의 posted_at도 끝까지 나눠서 불러온다.
+    const allPostTimes = {};
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase
+        .from("weverse_posts")
+        .select("id,date,posted_at,created_at")
+        .order("date", { ascending: false })
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        console.error("사진 정렬용 게시 시간을 불러오지 못했습니다:", error);
+        break;
+      }
+
+      (data || []).forEach((post) => {
+        const postedTime = post.posted_at
+          ? new Date(post.posted_at).getTime()
+          : NaN;
+        const dateTime = post.date
+          ? new Date(`${post.date}T00:00:00+09:00`).getTime()
+          : 0;
+        const createdTime = post.created_at
+          ? new Date(post.created_at).getTime()
+          : 0;
+
+        allPostTimes[String(post.id)] = {
+          postedTime: Number.isFinite(postedTime) ? postedTime : dateTime,
+          createdTime: Number.isFinite(createdTime) ? createdTime : 0,
+        };
+      });
+
+      if (!data || data.length < pageSize) break;
+    }
+
+    setPhotoPostTimes(allPostTimes);
     setPhotos(allPhotos);
   }
 
@@ -386,6 +424,11 @@ async function getPhotoPost(photo) {
           );
         }
       }
+
+      await deleteFromR2([
+        getR2Key(photo.image_url),
+        getR2Key(photo.thumbnail_url),
+      ]);
 
       // =========================
       // 화면 업데이트
@@ -1179,6 +1222,25 @@ const hairColorAliases = {
             : aDate - bDate;
 
         if (dateDiff !== 0) return dateDiff;
+
+        // 날짜가 같다면 사진 업로드 시각이 아니라 원본 위버스 게시 시각을 우선한다.
+        const aPostTime = photoPostTimes[String(a.post_id)]?.postedTime || 0;
+        const bPostTime = photoPostTimes[String(b.post_id)]?.postedTime || 0;
+        const postedTimeDiff =
+          sortOrder === "최신순"
+            ? bPostTime - aPostTime
+            : aPostTime - bPostTime;
+
+        if (postedTimeDiff !== 0) return postedTimeDiff;
+
+        const aPostCreatedTime = photoPostTimes[String(a.post_id)]?.createdTime || 0;
+        const bPostCreatedTime = photoPostTimes[String(b.post_id)]?.createdTime || 0;
+        const postCreatedDiff =
+          sortOrder === "최신순"
+            ? bPostCreatedTime - aPostCreatedTime
+            : aPostCreatedTime - bPostCreatedTime;
+
+        if (postCreatedDiff !== 0) return postCreatedDiff;
 
         const aKey = postSortKeys.get(aPostKey) || {};
         const bKey = postSortKeys.get(bPostKey) || {};

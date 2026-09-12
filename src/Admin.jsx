@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 import "./Admin.css";
 import "./PhotoLightbox.css";
 import TagPicker from "./TagPicker";
+import { uploadToR2 } from "./r2Storage";
 
 function Admin() {
   const [largePreview, setLargePreview] = useState(null);
@@ -717,31 +718,7 @@ for (
     const fileName =
       `${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
 
-    // Storage
-    const {
-      error: uploadError,
-    } = await supabase.storage
-      .from("photos")
-      .upload(
-        fileName,
-        file
-      );
-
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    // 공개 URL
-    const {
-      data: urlData,
-    } = supabase.storage
-      .from("photos")
-      .getPublicUrl(
-        fileName
-      );
-
-    const imageUrl =
-      urlData.publicUrl;
+    const { publicUrl: imageUrl } = await uploadToR2("photos", fileName, file);
 
     const tagArray =
       convertTags(photo.tags);
@@ -821,37 +798,7 @@ for (
     const fileName =
       `${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
 
-    // =========================
-    // 동영상 Storage 업로드
-    // =========================
-
-    const {
-      error: videoUploadError,
-    } = await supabase.storage
-      .from("videos")
-      .upload(
-        fileName,
-        file
-      );
-
-    if (videoUploadError) {
-      throw videoUploadError;
-    }
-
-    // =========================
-    // 동영상 공개 URL
-    // =========================
-
-    const {
-      data: videoUrlData,
-    } = supabase.storage
-      .from("videos")
-      .getPublicUrl(
-        fileName
-      );
-
-    const videoUrl =
-      videoUrlData.publicUrl;
+    const { publicUrl: videoUrl } = await uploadToR2("videos", fileName, file);
 
     const videoTagArray =
       convertTags(video.tags);

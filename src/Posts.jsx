@@ -5,6 +5,7 @@ import "./App.css";
 import "./Diary.css";
 import TagPicker from "./TagPicker";
 import ContentReport from "./ContentReport";
+import { deleteFromR2, getR2Key } from "./r2Storage";
 
 function Posts({ isAdmin = false }) {
   const [posts, setPosts] = useState([]);
@@ -742,6 +743,10 @@ function handleEditCropEnd(
           item.mediaKind ===
           "photo"
         ) {
+          await deleteFromR2([
+            getR2Key(item.image_url),
+            getR2Key(item.thumbnail_url),
+          ]);
           const path =
             getStoragePath(
               item.image_url,
@@ -774,6 +779,11 @@ function handleEditCropEnd(
           }
 
         } else {
+
+          await deleteFromR2([
+            getR2Key(item.video_url),
+            getR2Key(item.thumbnail_url),
+          ]);
 
           const path =
             getStoragePath(
@@ -1036,6 +1046,17 @@ function handleEditCropEnd(
             )
           )
           .filter(Boolean);
+
+      await deleteFromR2([
+        ...postPhotos.flatMap((photo) => [
+          getR2Key(photo.image_url),
+          getR2Key(photo.thumbnail_url),
+        ]),
+        ...postVideos.flatMap((video) => [
+          getR2Key(video.video_url),
+          getR2Key(video.thumbnail_url),
+        ]),
+      ]);
 
       // =========================
       // 사진 Storage 삭제

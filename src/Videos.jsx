@@ -5,6 +5,7 @@ import ArchiveFilters from "./ArchiveFilters";
 import "./App.css";
 import TagPicker from "./TagPicker";
 import ContentReport from "./ContentReport";
+import { deleteFromR2, getR2Key, uploadToR2 } from "./r2Storage";
 
 function Videos({ isAdmin = false }) {
   const [videos, setVideos] = useState([]);
@@ -112,11 +113,9 @@ function Videos({ isAdmin = false }) {
       const { error } = await supabase.from("videos").delete().eq("id", targetId);
       if (error) throw error;
 
-      const publicMarker = "/storage/v1/object/public/videos/";
-      const path = selectedVideo.video_url?.includes(publicMarker)
-        ? decodeURIComponent(selectedVideo.video_url.split(publicMarker)[1])
-        : "";
-      if (path) await supabase.storage.from("videos").remove([path]);
+      const videoKey = getR2Key(selectedVideo.video_url);
+      const thumbnailKey = getR2Key(selectedVideo.thumbnail_url);
+      await deleteFromR2([videoKey, thumbnailKey]);
 
       setVideos((current) => current.filter((video) => video.id !== targetId));
       setSelectedVideo(null);
@@ -203,12 +202,6 @@ function Videos({ isAdmin = false }) {
     });
   }
 
-  function getVideoStoragePath(publicUrl) {
-    const marker = "/storage/v1/object/public/videos/";
-    if (!publicUrl?.includes(marker)) return null;
-    return decodeURIComponent(publicUrl.split(marker)[1]);
-  }
-
   async function saveThumbnailTime() {
     if (!selectedVideo) return;
 
@@ -220,18 +213,12 @@ function Videos({ isAdmin = false }) {
         thumbnailTime,
       );
       const thumbnailPath = `thumbnails/${selectedVideo.id}/${Date.now()}.webp`;
-      const { error: uploadError } = await supabase.storage
-        .from("videos")
-        .upload(thumbnailPath, thumbnailBlob, {
-          contentType: "image/webp",
-          upsert: false,
-        });
-      if (uploadError) throw uploadError;
-
-      const { data: thumbnailUrlData } = supabase.storage
-        .from("videos")
-        .getPublicUrl(thumbnailPath);
-      const thumbnailUrl = thumbnailUrlData.publicUrl;
+      const { publicUrl: thumbnailUrl, key: thumbnailKey } = await uploadToR2(
+        "videos",
+        thumbnailPath,
+        thumbnailBlob,
+        "image/webp",
+      );
 
       const { error } = await supabase
         .from("videos")
@@ -242,13 +229,13 @@ function Videos({ isAdmin = false }) {
         .eq("id", selectedVideo.id);
 
       if (error) {
-        await supabase.storage.from("videos").remove([thumbnailPath]);
+        await deleteFromR2([thumbnailKey]);
         throw error;
       }
 
-      const oldThumbnailPath = getVideoStoragePath(selectedVideo.thumbnail_url);
-      if (oldThumbnailPath?.startsWith("thumbnails/") && oldThumbnailPath !== thumbnailPath) {
-        await supabase.storage.from("videos").remove([oldThumbnailPath]);
+      const oldThumbnailKey = getR2Key(selectedVideo.thumbnail_url);
+      if (oldThumbnailKey?.startsWith("videos/thumbnails/") && oldThumbnailKey !== thumbnailKey) {
+        await deleteFromR2([oldThumbnailKey]);
       }
 
       setVideos((current) =>

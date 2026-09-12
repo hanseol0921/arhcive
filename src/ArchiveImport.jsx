@@ -6,6 +6,7 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { supabase } from "./supabaseClient";
 import "./App.css";
 import TagPicker from "./TagPicker";
+import { deleteFromR2, uploadToR2 } from "./r2Storage";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -1181,21 +1182,7 @@ function ArchiveImport() {
   // =========================
 
   async function removeUploadedFiles(uploaded) {
-    const photoPaths = uploaded
-      .filter((item) => item.bucket === "photos")
-      .map((item) => item.path);
-
-    const videoPaths = uploaded
-      .filter((item) => item.bucket === "videos")
-      .map((item) => item.path);
-
-    if (photoPaths.length) {
-      await supabase.storage.from("photos").remove(photoPaths);
-    }
-
-    if (videoPaths.length) {
-      await supabase.storage.from("videos").remove(videoPaths);
-    }
+    await deleteFromR2(uploaded.map((item) => `${item.bucket}/${item.path}`));
   }
 
   // =========================
@@ -1335,24 +1322,12 @@ function ArchiveImport() {
             item.file.name,
           )}`;
 
-          const { error: uploadError } = await supabase.storage
-            .from("photos")
-            .upload(path, item.file, {
-              upsert: false,
-            });
-
-          if (uploadError) {
-            throw uploadError;
-          }
+          const { publicUrl: imageUrl } = await uploadToR2("photos", path, item.file);
 
           uploadedFiles.push({
             bucket: "photos",
             path,
           });
-
-          const { data: urlData } = supabase.storage
-            .from("photos")
-            .getPublicUrl(path);
 
           // =====================
           // 목록용 썸네일 생성 + 업로드
@@ -1362,32 +1337,24 @@ function ArchiveImport() {
 
           const thumbnailPath = `${draft.postDate}/${createdPostId}/thumbnails/${makeId()}.webp`;
 
-          const { error: thumbnailUploadError } = await supabase.storage
-            .from("photos")
-            .upload(thumbnailPath, thumbnailBlob, {
-              contentType: "image/webp",
-              upsert: false,
-            });
-
-          if (thumbnailUploadError) {
-            throw thumbnailUploadError;
-          }
+          const { publicUrl: thumbnailUrl } = await uploadToR2(
+            "photos",
+            thumbnailPath,
+            thumbnailBlob,
+            "image/webp",
+          );
 
           uploadedFiles.push({
             bucket: "photos",
             path: thumbnailPath,
           });
 
-          const { data: thumbnailUrlData } = supabase.storage
-            .from("photos")
-            .getPublicUrl(thumbnailPath);
-
           const { error: insertError } = await supabase.from("photos").insert({
             post_id: createdPostId,
 
-            image_url: urlData.publicUrl,
+            image_url: imageUrl,
 
-            thumbnail_url: thumbnailUrlData.publicUrl,
+            thumbnail_url: thumbnailUrl,
 
             date: draft.postDate,
 
@@ -1432,24 +1399,12 @@ function ArchiveImport() {
             item.file.name,
           )}`;
 
-          const { error: uploadError } = await supabase.storage
-            .from("videos")
-            .upload(path, item.file, {
-              upsert: false,
-            });
-
-          if (uploadError) {
-            throw uploadError;
-          }
+          const { publicUrl: videoUrl } = await uploadToR2("videos", path, item.file);
 
           uploadedFiles.push({
             bucket: "videos",
             path,
           });
-
-          const { data: urlData } = supabase.storage
-            .from("videos")
-            .getPublicUrl(path);
 
           let thumbnailUrl = null;
 
@@ -1466,7 +1421,7 @@ function ArchiveImport() {
           const { error: insertError } = await supabase.from("videos").insert({
             post_id: createdPostId,
 
-            video_url: urlData.publicUrl,
+            video_url: videoUrl,
 
             thumbnail_url: thumbnailUrl,
 
