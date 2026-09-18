@@ -2338,6 +2338,113 @@ select {
   font-weight: 700;
   letter-spacing: 1px;
   color: #625e57;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.site-copy-edit-button {
+  padding: 3px 7px;
+  border: 1px solid #cfc8bd;
+  border-radius: 3px;
+  background: #fff;
+  color: #7b746a;
+  font: 500 9px/1.2 Arial, sans-serif;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.site-copy-edit-button:hover { background: #f7f4ee; }
+
+.site-copy-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(55, 51, 45, 0.35);
+}
+
+.site-copy-modal {
+  width: min(390px, 100%);
+  padding: 20px;
+  border: 1px solid #d8d1c6;
+  border-radius: 10px;
+  background: #fffdf9;
+  box-shadow: 0 14px 40px rgba(61, 54, 45, 0.2);
+}
+
+.site-copy-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  color: #5f5a52;
+  font-size: 15px;
+}
+
+.site-copy-modal-header button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #777066;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.site-copy-modal > label {
+  display: grid;
+  gap: 6px;
+  margin-top: 13px;
+  color: #797268;
+  font-size: 11px;
+}
+
+.site-copy-modal input,
+.site-copy-modal textarea {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #d8d1c6;
+  border-radius: 4px;
+  background: #fff;
+  color: #4f4b45;
+  font: 12px/1.5 Arial, sans-serif;
+}
+
+.site-copy-modal textarea { resize: vertical; }
+
+.site-copy-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.site-copy-modal-actions button {
+  min-width: 66px;
+  padding: 8px 12px;
+  border: 1px solid #cfc8bd;
+  border-radius: 4px;
+  background: #fff;
+  color: #6c665d;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.site-copy-modal-actions button[type="submit"] {
+  border-color: #625e57;
+  background: #625e57;
+  color: #fff;
+}
+
+.site-copy-modal-actions button:disabled,
+.site-copy-modal-header button:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 @media (max-width: 800px) {

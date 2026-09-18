@@ -12,6 +12,12 @@ const DEFAULT_BGM_PLAYLIST = [
   },
 ];
 
+const DEFAULT_SITE_COPY = {
+  archiveTitle: "링링일기",
+  profileMessageTitle: "링링의 한 마디",
+  profileMessage: "하이류~~~",
+};
+
 function getYoutubeVideoId(url) {
   try {
     const parsed = new URL(url);
@@ -601,6 +607,80 @@ function ArchiveLayout({
   const [bgmPlaylist, setBgmPlaylist] = useState(DEFAULT_BGM_PLAYLIST);
   const [savingBgmPlaylist, setSavingBgmPlaylist] = useState(false);
   const [generalReportOpen, setGeneralReportOpen] = useState(false);
+  const [siteCopy, setSiteCopy] = useState(DEFAULT_SITE_COPY);
+  const [siteCopyDraft, setSiteCopyDraft] = useState(DEFAULT_SITE_COPY);
+  const [siteCopyEditorOpen, setSiteCopyEditorOpen] = useState(false);
+  const [savingSiteCopy, setSavingSiteCopy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSiteCopy() {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("key, value")
+        .in("key", ["archive_title", "profile_message_title", "profile_message"]);
+
+      if (error) {
+        console.error("사이트 문구를 불러오지 못했습니다:", error);
+        return;
+      }
+
+      const values = Object.fromEntries((data || []).map((row) => [row.key, row.value]));
+      const nextCopy = {
+        archiveTitle: values.archive_title || DEFAULT_SITE_COPY.archiveTitle,
+        profileMessageTitle:
+          values.profile_message_title || DEFAULT_SITE_COPY.profileMessageTitle,
+        profileMessage: values.profile_message || DEFAULT_SITE_COPY.profileMessage,
+      };
+
+      if (!cancelled) {
+        setSiteCopy(nextCopy);
+        setSiteCopyDraft(nextCopy);
+      }
+    }
+
+    loadSiteCopy();
+    return () => { cancelled = true; };
+  }, []);
+
+  async function saveSiteCopy(event) {
+    event.preventDefault();
+
+    const nextCopy = {
+      archiveTitle: siteCopyDraft.archiveTitle.trim() || DEFAULT_SITE_COPY.archiveTitle,
+      profileMessageTitle:
+        siteCopyDraft.profileMessageTitle.trim() || DEFAULT_SITE_COPY.profileMessageTitle,
+      profileMessage: siteCopyDraft.profileMessage.trim() || DEFAULT_SITE_COPY.profileMessage,
+    };
+
+    setSavingSiteCopy(true);
+    try {
+      const updatedAt = new Date().toISOString();
+      const { error } = await supabase.from("site_settings").upsert(
+        [
+          { key: "archive_title", value: nextCopy.archiveTitle, updated_at: updatedAt },
+          {
+            key: "profile_message_title",
+            value: nextCopy.profileMessageTitle,
+            updated_at: updatedAt,
+          },
+          { key: "profile_message", value: nextCopy.profileMessage, updated_at: updatedAt },
+        ],
+        { onConflict: "key" },
+      );
+
+      if (error) throw error;
+      setSiteCopy(nextCopy);
+      setSiteCopyDraft(nextCopy);
+      setSiteCopyEditorOpen(false);
+    } catch (error) {
+      console.error("사이트 문구 저장 오류:", error);
+      alert(`사이트 문구를 저장하지 못했습니다.\n${error.message}`);
+    } finally {
+      setSavingSiteCopy(false);
+    }
+  }
 
   useEffect(() => {
     const menuSelector = [
@@ -1083,7 +1163,21 @@ function ArchiveLayout({
               <span>TOTAL <strong>{visitorCounts.total}</strong></span>
             </div>
 
-            <div className="archive-book-title">링링일기</div>
+            <div className="archive-book-title">
+              <span>{siteCopy.archiveTitle}</span>
+              {isAdmin && (
+                <button
+                  type="button"
+                  className="site-copy-edit-button"
+                  onClick={() => {
+                    setSiteCopyDraft(siteCopy);
+                    setSiteCopyEditorOpen(true);
+                  }}
+                >
+                  문구 수정
+                </button>
+              )}
+            </div>
           </div>
 
           {/* =========================
@@ -1113,9 +1207,9 @@ function ArchiveLayout({
               )}
             </div>
 
-            <div className="profile-name">링링의 한 마디</div>
+            <div className="profile-name">{siteCopy.profileMessageTitle}</div>
 
-            <div className="profile-text">하이류~~~</div>
+            <div className="profile-text">{siteCopy.profileMessage}</div>
 
             <div className="profile-line" />
 
@@ -1140,6 +1234,88 @@ function ArchiveLayout({
             )}
 
           </aside>
+
+          {isAdmin && siteCopyEditorOpen && (
+            <div
+              className="site-copy-modal-backdrop"
+              role="presentation"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget && !savingSiteCopy) {
+                  setSiteCopyEditorOpen(false);
+                }
+              }}
+            >
+              <form className="site-copy-modal" onSubmit={saveSiteCopy}>
+                <div className="site-copy-modal-header">
+                  <strong>사이트 문구 수정</strong>
+                  <button
+                    type="button"
+                    aria-label="닫기"
+                    disabled={savingSiteCopy}
+                    onClick={() => setSiteCopyEditorOpen(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <label>
+                  <span>상단 제목</span>
+                  <input
+                    value={siteCopyDraft.archiveTitle}
+                    maxLength={40}
+                    onChange={(event) =>
+                      setSiteCopyDraft((current) => ({
+                        ...current,
+                        archiveTitle: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
+                <label>
+                  <span>한마디 제목</span>
+                  <input
+                    value={siteCopyDraft.profileMessageTitle}
+                    maxLength={40}
+                    onChange={(event) =>
+                      setSiteCopyDraft((current) => ({
+                        ...current,
+                        profileMessageTitle: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
+                <label>
+                  <span>한마디 내용</span>
+                  <textarea
+                    value={siteCopyDraft.profileMessage}
+                    maxLength={160}
+                    rows={3}
+                    onChange={(event) =>
+                      setSiteCopyDraft((current) => ({
+                        ...current,
+                        profileMessage: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
+                <div className="site-copy-modal-actions">
+                  <button
+                    type="button"
+                    disabled={savingSiteCopy}
+                    onClick={() => setSiteCopyEditorOpen(false)}
+                  >
+                    취소
+                  </button>
+                  <button type="submit" disabled={savingSiteCopy}>
+                    {savingSiteCopy ? "저장 중..." : "저장"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
           {/* =========================
               공통 스프링
