@@ -32,6 +32,7 @@ function ArchiveFilters({
       <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
         <option value="최신순">최신순</option>
         <option value="오래된순">오래된순</option>
+        <option value="인기순">인기순</option>
       </select>
 
       <select value={type} onChange={(e) => setType(e.target.value)}>

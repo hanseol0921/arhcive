@@ -10,6 +10,7 @@ import PhotoManager from "./PhotoManager";
 import Guestbook from "./Guestbook";
 import ReportManager from "./ReportManager";
 import ScraperControl from "./ScraperControl";
+import TagManager from "./TagManager";
 
 function AdminRoute() {
   const [session, setSession] = useState(null);
@@ -52,6 +53,7 @@ function AdminRoute() {
   if (path === "/admin/photos/manage") return <PhotoManager />;
   if (path === "/admin/reports") return <ReportManager />;
   if (path === "/admin/scraper") return <ScraperControl />;
+  if (path === "/admin/tags") return <TagManager />;
 
   return <AdminHome />;
 }

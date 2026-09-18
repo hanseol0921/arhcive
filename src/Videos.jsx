@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import ArchiveLayout from "./ArchiveLayout";
 import ArchiveFilters from "./ArchiveFilters";
+import { getPopularityScore, trackMediaEngagement } from "./mediaPopularity";
 import "./App.css";
 import TagPicker from "./TagPicker";
 import ContentReport from "./ContentReport";
@@ -389,11 +390,16 @@ function Videos({ isAdmin = false }) {
         );
       })
       .sort((a, b) => {
+        if (sortOrder === "인기순") {
+          const popularityDiff = getPopularityScore(b) - getPopularityScore(a);
+          if (popularityDiff !== 0) return popularityDiff;
+        }
+
         const aTime = getVideoSortTime(a);
 
         const bTime = getVideoSortTime(b);
 
-        return sortOrder === "최신순" ? bTime - aTime : aTime - bTime;
+        return sortOrder === "오래된순" ? aTime - bTime : bTime - aTime;
       });
   }, [
     videos,
@@ -443,6 +449,7 @@ function Videos({ isAdmin = false }) {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      void trackMediaEngagement("video", video.id, "download");
 
       URL.revokeObjectURL(objectUrl);
     } catch (error) {
@@ -525,7 +532,10 @@ function Videos({ isAdmin = false }) {
                         <article
                           className="video-card"
                           key={video.id}
-                          onClick={() => setSelectedVideo(video)}
+                          onClick={() => {
+                            setSelectedVideo(video);
+                            void trackMediaEngagement("video", video.id, "view");
+                          }}
                         >
                           <div className="video-preview">
                             {video.thumbnail_url ? (
@@ -582,7 +592,10 @@ function Videos({ isAdmin = false }) {
                                   href={post.weverse_url}
                                   target="_blank"
                                   rel="noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void trackMediaEngagement("video", video.id, "weverse");
+                                  }}
                                 >
                                   WEVERSE ↗
                                 </a>
@@ -804,6 +817,9 @@ function Videos({ isAdmin = false }) {
                           href={getPost(selectedVideo).weverse_url}
                           target="_blank"
                           rel="noreferrer"
+                          onClick={() =>
+                            void trackMediaEngagement("video", selectedVideo.id, "weverse")
+                          }
                         >
                           위버스에서 보기 ↗
                         </a>

@@ -6,6 +6,7 @@ import "./App.css";
 import TagPicker from "./TagPicker";
 import ContentReport from "./ContentReport";
 import { deleteFromR2, getR2Key } from "./r2Storage";
+import { getPopularityScore, trackMediaEngagement } from "./mediaPopularity";
 
 function Archive({ isAdmin = false }) {
   const isMobileDevice =
@@ -765,6 +766,7 @@ async function getPhotoPost(photo) {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      void trackMediaEngagement("photo", photo.id, "download");
     } catch (error) {
       console.error("사진 다운로드 오류:", error);
       window.location.href = photo.image_url;
@@ -793,11 +795,12 @@ async function getPhotoPost(photo) {
   }
 
   function openSelectedWeversePosts() {
+    const selectedWithLinks = photos.filter(
+      (photo) =>
+        selectedPhotoIds.has(photo.id) && normalizeWeverseUrl(photo.weverse_url),
+    );
     const urls = [...new Set(
-      photos
-        .filter((photo) => selectedPhotoIds.has(photo.id))
-        .map((photo) => normalizeWeverseUrl(photo.weverse_url))
-        .filter(Boolean),
+      selectedWithLinks.map((photo) => normalizeWeverseUrl(photo.weverse_url)),
     )];
 
     if (!urls.length) {
@@ -805,6 +808,9 @@ async function getPhotoPost(photo) {
       return;
     }
 
+    selectedWithLinks.forEach((photo) => {
+      void trackMediaEngagement("photo", photo.id, "weverse");
+    });
     urls.forEach((url) => window.open(url, "_blank", "noopener,noreferrer"));
     showCopyNotice(`중복을 제외한 위버스 게시글 ${urls.length}개를 열었습니다.`);
   }
@@ -836,6 +842,7 @@ async function getPhotoPost(photo) {
           const extension = rawExtension === "jpeg" ? "jpg" : rawExtension;
           const order = String(index + 1).padStart(String(selected.length).length, "0");
           zip.file(`${order}_riwoo_${photo.date || "photo"}_${photo.id}.${extension}`, blob);
+          void trackMediaEngagement("photo", photo.id, "download");
         } catch (error) {
           console.error("묶음 다운로드 사진 불러오기 오류:", photo.id, error);
           failed.push(photo.id);
@@ -1296,6 +1303,13 @@ const hairColorAliases = {
         );
       })
       .sort((a, b) => {
+        const descending = sortOrder !== "오래된순";
+
+        if (sortOrder === "인기순") {
+          const popularityDiff = getPopularityScore(b) - getPopularityScore(a);
+          if (popularityDiff !== 0) return popularityDiff;
+        }
+
         const aPostKey = a.post_id || `photo-${a.id}`;
         const bPostKey = b.post_id || `photo-${b.id}`;
 
@@ -1307,20 +1321,20 @@ const hairColorAliases = {
             Number(b.media_order ?? b.upload_order ?? 0);
 
           if (mediaOrderDiff !== 0) {
-            return sortOrder === "최신순"
+            return descending
               ? -mediaOrderDiff
               : mediaOrderDiff;
           }
 
           // 순서값까지 같은 경우에도 결과가 새로고침마다 섞이지 않게 고정한다.
           const idDiff = String(a.id).localeCompare(String(b.id));
-          return sortOrder === "최신순" ? -idDiff : idDiff;
+          return descending ? -idDiff : idDiff;
         }
 
         const aDate = new Date(a.date || 0).getTime();
         const bDate = new Date(b.date || 0).getTime();
         const dateDiff =
-          sortOrder === "최신순"
+          descending
             ? bDate - aDate
             : aDate - bDate;
 
@@ -1330,7 +1344,7 @@ const hairColorAliases = {
         const aPostTime = photoPostTimes[String(a.post_id)]?.postedTime || 0;
         const bPostTime = photoPostTimes[String(b.post_id)]?.postedTime || 0;
         const postedTimeDiff =
-          sortOrder === "최신순"
+          descending
             ? bPostTime - aPostTime
             : aPostTime - bPostTime;
 
@@ -1339,7 +1353,7 @@ const hairColorAliases = {
         const aPostCreatedTime = photoPostTimes[String(a.post_id)]?.createdTime || 0;
         const bPostCreatedTime = photoPostTimes[String(b.post_id)]?.createdTime || 0;
         const postCreatedDiff =
-          sortOrder === "최신순"
+          descending
             ? bPostCreatedTime - aPostCreatedTime
             : aPostCreatedTime - bPostCreatedTime;
 
@@ -1348,14 +1362,14 @@ const hairColorAliases = {
         const aKey = postSortKeys.get(aPostKey) || {};
         const bKey = postSortKeys.get(bPostKey) || {};
         const orderDiff =
-          sortOrder === "최신순"
+          descending
             ? (bKey.uploadOrder ?? 0) - (aKey.uploadOrder ?? 0)
             : (aKey.uploadOrder ?? 0) - (bKey.uploadOrder ?? 0);
 
         if (orderDiff !== 0) return orderDiff;
 
         const createdDiff =
-          sortOrder === "최신순"
+          descending
             ? (bKey.createdTime ?? 0) - (aKey.createdTime ?? 0)
             : (aKey.createdTime ?? 0) - (bKey.createdTime ?? 0);
 
@@ -1499,6 +1513,7 @@ const hairColorAliases = {
               onClick={() => {
                 setSelectedPhoto(photo);
                 setEditMode(false);
+                void trackMediaEngagement("photo", photo.id, "view");
               }}
             >
               <label
@@ -1669,6 +1684,9 @@ const hairColorAliases = {
                       href={selectedPhoto.weverse_url}
                       target="_blank"
                       rel="noreferrer"
+                      onClick={() =>
+                        void trackMediaEngagement("photo", selectedPhoto.id, "weverse")
+                      }
                     >
                       위버스에서 보기 ↗
                     </a>
