@@ -31,6 +31,9 @@ function Archive({ isAdmin = false }) {
   });
 
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState(() => new Set());
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [bulkDownloadProgress, setBulkDownloadProgress] = useState("");
   const [tagAliases, setTagAliases] = useState([]);
   const photoModalOpen = selectedPhoto !== null;
 
@@ -768,6 +771,106 @@ async function getPhotoPost(photo) {
     }
   }
 
+  function togglePhotoSelection(photoId) {
+    setSelectedPhotoIds((current) => {
+      const next = new Set(current);
+      if (next.has(photoId)) next.delete(photoId);
+      else next.add(photoId);
+      return next;
+    });
+  }
+
+  function normalizeWeverseUrl(value) {
+    if (!value) return "";
+    try {
+      const url = new URL(value);
+      url.search = "";
+      url.hash = "";
+      return url.toString().replace(/\/$/, "");
+    } catch {
+      return String(value).trim();
+    }
+  }
+
+  function openSelectedWeversePosts() {
+    const urls = [...new Set(
+      photos
+        .filter((photo) => selectedPhotoIds.has(photo.id))
+        .map((photo) => normalizeWeverseUrl(photo.weverse_url))
+        .filter(Boolean),
+    )];
+
+    if (!urls.length) {
+      showCopyNotice("선택한 사진에 위버스 링크가 없습니다.");
+      return;
+    }
+
+    urls.forEach((url) => window.open(url, "_blank", "noopener,noreferrer"));
+    showCopyNotice(`중복을 제외한 위버스 게시글 ${urls.length}개를 열었습니다.`);
+  }
+
+  async function downloadSelectedPhotos() {
+    const selected = filteredPhotos.filter((photo) => selectedPhotoIds.has(photo.id));
+    if (!selected.length || bulkDownloading) return;
+
+    setBulkDownloading(true);
+    setBulkDownloadProgress(`0 / ${selected.length}`);
+
+    try {
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      const failed = [];
+
+      for (let index = 0; index < selected.length; index++) {
+        const photo = selected[index];
+        try {
+          const response = await fetch(photo.image_url);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const blob = await response.blob();
+          const mimeExtension = blob.type?.startsWith("image/")
+            ? blob.type.split("/")[1]?.split("+")[0]?.toLowerCase()
+            : "";
+          const urlExtension = new URL(photo.image_url).pathname
+            .match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase();
+          const rawExtension = mimeExtension || urlExtension || "jpg";
+          const extension = rawExtension === "jpeg" ? "jpg" : rawExtension;
+          const order = String(index + 1).padStart(String(selected.length).length, "0");
+          zip.file(`${order}_riwoo_${photo.date || "photo"}_${photo.id}.${extension}`, blob);
+        } catch (error) {
+          console.error("묶음 다운로드 사진 불러오기 오류:", photo.id, error);
+          failed.push(photo.id);
+        }
+        setBulkDownloadProgress(`${index + 1} / ${selected.length}`);
+      }
+
+      if (failed.length === selected.length) {
+        throw new Error("선택한 사진을 불러오지 못했습니다.");
+      }
+
+      setBulkDownloadProgress("ZIP 만드는 중…");
+      const zipBlob = await zip.generateAsync({ type: "blob", compression: "STORE" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = `riwoo_archive_${new Date().toISOString().slice(0, 10)}_${selected.length}photos.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+      showCopyNotice(
+        failed.length
+          ? `${selected.length - failed.length}장 다운로드 완료 · ${failed.length}장 실패`
+          : `${selected.length}장 다운로드를 시작했습니다.`,
+      );
+    } catch (error) {
+      console.error("사진 묶음 다운로드 오류:", error);
+      showCopyNotice(error.message || "사진 묶음 다운로드에 실패했습니다.");
+    } finally {
+      setBulkDownloading(false);
+      setBulkDownloadProgress("");
+    }
+  }
+
   async function sharePhoto(photo) {
     try {
       const response = await fetch(photo.image_url);
@@ -1373,16 +1476,43 @@ const hairColorAliases = {
                 사진
             ========================= */}
 
+        {selectedPhotoIds.size > 0 && (
+          <div className="photo-selection-toolbar">
+            <strong>{selectedPhotoIds.size}장 선택</strong>
+            <button type="button" onClick={downloadSelectedPhotos} disabled={bulkDownloading}>
+              {bulkDownloading ? `다운로드 ${bulkDownloadProgress}` : "한 번에 다운로드"}
+            </button>
+            <button type="button" onClick={openSelectedWeversePosts}>
+              위버스 바로가기
+            </button>
+            <button type="button" className="photo-selection-clear" onClick={() => setSelectedPhotoIds(new Set())}>
+              선택 해제
+            </button>
+          </div>
+        )}
+
         <div className="photo-grid">
           {filteredPhotos.map((photo) => (
             <div
-              className="photo-item"
+              className={`photo-item ${selectedPhotoIds.has(photo.id) ? "is-selected" : ""}`}
               key={photo.id}
               onClick={() => {
                 setSelectedPhoto(photo);
                 setEditMode(false);
               }}
             >
+              <label
+                className="photo-select-control"
+                onClick={(event) => event.stopPropagation()}
+                aria-label="사진 선택"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedPhotoIds.has(photo.id)}
+                  onChange={() => togglePhotoSelection(photo.id)}
+                />
+                <span>✓</span>
+              </label>
               <div className="photo">
                 <img
                   src={photo.thumbnail_url || photo.image_url}
