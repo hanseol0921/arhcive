@@ -2345,6 +2345,9 @@ select {
 }
 
 .site-copy-edit-button {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
   padding: 3px 7px;
   border: 1px solid #cfc8bd;
   border-radius: 3px;
