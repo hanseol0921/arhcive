@@ -520,7 +520,8 @@ function BgmPlaylistManager({ playlist, onSave, saving }) {
 }
 
 export function GlobalBgmPlayer({ isAdmin = false }) {
-  const [playlist, setPlaylist] = useState(DEFAULT_BGM_PLAYLIST);
+  const [playlist, setPlaylist] = useState([]);
+  const [playlistLoaded, setPlaylistLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -531,16 +532,23 @@ export function GlobalBgmPlayer({ isAdmin = false }) {
       .eq("key", "bgm_playlist")
       .maybeSingle()
       .then(({ data, error }) => {
-        if (cancelled || error || !data?.value) return;
+        if (cancelled) return;
+        if (error || !data?.value) {
+          setPlaylist(DEFAULT_BGM_PLAYLIST);
+          setPlaylistLoaded(true);
+          return;
+        }
         try {
           const parsed = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
           const valid = Array.isArray(parsed)
             ? parsed.filter((track) => track?.url && track?.title && track?.artist)
             : [];
-          if (valid.length) setPlaylist(valid);
+          setPlaylist(valid.length ? valid : DEFAULT_BGM_PLAYLIST);
         } catch (error) {
           console.error("저장된 BGM 재생목록 형식 오류:", error);
+          setPlaylist(DEFAULT_BGM_PLAYLIST);
         }
+        setPlaylistLoaded(true);
       });
     return () => { cancelled = true; };
   }, []);
@@ -568,6 +576,8 @@ export function GlobalBgmPlayer({ isAdmin = false }) {
       setSaving(false);
     }
   }
+
+  if (!playlistLoaded) return null;
 
   return (
     <aside className="global-bgm-popup" aria-label="BGM 플레이어">
@@ -607,10 +617,15 @@ function ArchiveLayout({
   const [bgmPlaylist, setBgmPlaylist] = useState(DEFAULT_BGM_PLAYLIST);
   const [savingBgmPlaylist, setSavingBgmPlaylist] = useState(false);
   const [generalReportOpen, setGeneralReportOpen] = useState(false);
-  const [siteCopy, setSiteCopy] = useState(DEFAULT_SITE_COPY);
+  const [siteCopy, setSiteCopy] = useState({
+    archiveTitle: "",
+    profileMessageTitle: "",
+    profileMessage: "",
+  });
   const [siteCopyDraft, setSiteCopyDraft] = useState(DEFAULT_SITE_COPY);
   const [siteCopyEditorOpen, setSiteCopyEditorOpen] = useState(false);
   const [savingSiteCopy, setSavingSiteCopy] = useState(false);
+  const [siteCopyLoaded, setSiteCopyLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -623,6 +638,11 @@ function ArchiveLayout({
 
       if (error) {
         console.error("사이트 문구를 불러오지 못했습니다:", error);
+        if (!cancelled) {
+          setSiteCopy(DEFAULT_SITE_COPY);
+          setSiteCopyDraft(DEFAULT_SITE_COPY);
+          setSiteCopyLoaded(true);
+        }
         return;
       }
 
@@ -637,6 +657,7 @@ function ArchiveLayout({
       if (!cancelled) {
         setSiteCopy(nextCopy);
         setSiteCopyDraft(nextCopy);
+        setSiteCopyLoaded(true);
       }
     }
 
@@ -1164,8 +1185,8 @@ function ArchiveLayout({
             </div>
 
             <div className="archive-book-title">
-              <span>{siteCopy.archiveTitle}</span>
-              {isAdmin && (
+              <span>{siteCopyLoaded ? siteCopy.archiveTitle : "\u00a0"}</span>
+              {isAdmin && siteCopyLoaded && (
                 <button
                   type="button"
                   className="site-copy-edit-button"
@@ -1207,9 +1228,13 @@ function ArchiveLayout({
               )}
             </div>
 
-            <div className="profile-name">{siteCopy.profileMessageTitle}</div>
+            <div className="profile-name">
+              {siteCopyLoaded ? siteCopy.profileMessageTitle : "\u00a0"}
+            </div>
 
-            <div className="profile-text">{siteCopy.profileMessage}</div>
+            <div className="profile-text">
+              {siteCopyLoaded ? siteCopy.profileMessage : "\u00a0"}
+            </div>
 
             <div className="profile-line" />
 
