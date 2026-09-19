@@ -520,6 +520,7 @@ function BgmPlaylistManager({ playlist, onSave, saving }) {
 }
 
 export function GlobalBgmPlayer({ isAdmin = false }) {
+  const [mobileExpanded, setMobileExpanded] = useState(false);
   const [playlist, setPlaylist] = useState([]);
   const [playlistLoaded, setPlaylistLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -580,15 +581,28 @@ export function GlobalBgmPlayer({ isAdmin = false }) {
   if (!playlistLoaded) return null;
 
   return (
-    <aside className="global-bgm-popup" aria-label="BGM 플레이어">
+    <aside className={`global-bgm-popup${mobileExpanded ? " is-mobile-expanded" : ""}`} aria-label="BGM 플레이어">
       <div className="global-bgm-popup-bar">
         <span>MY BGM</span>
         <span>♪</span>
       </div>
+      <button
+        type="button"
+        className="global-bgm-mobile-toggle"
+        aria-expanded={mobileExpanded}
+        aria-controls="global-bgm-content"
+        aria-label={mobileExpanded ? "BGM 플레이어 접기" : "BGM 플레이어 펼치기"}
+        onClick={() => setMobileExpanded((expanded) => !expanded)}
+      >
+        <span>♪ BGM</span>
+        <span aria-hidden="true">{mobileExpanded ? "−" : "+"}</span>
+      </button>
+      <div id="global-bgm-content" className="global-bgm-content">
       <MiniBgmPlayer playlist={playlist} />
       {isAdmin && (
         <BgmPlaylistManager playlist={playlist} onSave={savePlaylist} saving={saving} />
       )}
+      </div>
     </aside>
   );
 }
