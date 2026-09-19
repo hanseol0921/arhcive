@@ -5173,3 +5173,65 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
   min-height: 30px;
   padding: 0 9px;
 }
+
+/* Mobile BGM starts folded; keep the player mounted so folding preserves audio. */
+.global-bgm-mobile-toggle {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .global-bgm-popup {
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: 94px;
+    max-width: calc(100vw - 20px);
+    box-sizing: border-box;
+    padding: 0;
+    opacity: 1;
+  }
+
+  .global-bgm-popup .global-bgm-popup-bar {
+    display: none;
+  }
+
+  .global-bgm-mobile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    border: 0;
+    border-radius: inherit;
+    background: #eeeae3;
+    color: #59544c;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .global-bgm-mobile-toggle:focus-visible {
+    outline: 2px solid #277b90;
+    outline-offset: 2px;
+  }
+
+  .global-bgm-popup:not(.is-mobile-expanded) .global-bgm-content {
+    display: none;
+  }
+
+  .global-bgm-popup.is-mobile-expanded {
+    width: 220px;
+  }
+
+  .global-bgm-popup.is-mobile-expanded .global-bgm-content {
+    padding: 8px 10px;
+  }
+
+  .global-bgm-popup .mini-bgm-player button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
