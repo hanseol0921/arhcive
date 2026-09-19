@@ -85,7 +85,6 @@ function Archive({ isAdmin = false }) {
 
   const [editMode, setEditMode] = useState(false);
 
-  const [editDate, setEditDate] = useState("");
   const [editType, setEditType] = useState("");
   const [editHairColor, setEditHairColor] = useState("");
   const [editTags, setEditTags] = useState("");
@@ -464,7 +463,6 @@ async function getPhotoPost(photo) {
   // =========================
 
   function openEditMode(photo) {
-    setEditDate(photo.date || "");
     setEditType(photo.type || "");
     setEditHairColor(
       photo.hair_color || ""
@@ -675,7 +673,6 @@ async function getPhotoPost(photo) {
       } = await supabase
         .from("photos")
         .update({
-          date: editDate,
           type: editType,
           hair_color: editHairColor,
           tags: tagArray,
@@ -1753,16 +1750,6 @@ const hairColorAliases = {
                     </div>
                   </div>
 
-                  {/* 날짜 */}
-
-                  <label>날짜</label>
-
-                  <input
-                    type="date"
-                    value={editDate}
-                    onChange={(e) => setEditDate(e.target.value)}
-                  />
-
                   {/* 유형 */}
 
                   <label>유형</label>
@@ -1819,12 +1806,6 @@ const hairColorAliases = {
                   <label>태그</label>
 
                   <TagPicker value={editTags} onChange={setEditTags} />
-
-                  {/* 검색용 태그 */}
-
-                  <div className="input-help">
-                    검색용 태그는 관리자 태그 사전에서 한 번만 관리합니다.
-                  </div>
 
                   {/* 위버스 */}
 
