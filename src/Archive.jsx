@@ -32,6 +32,12 @@ function Archive({ isAdmin = false }) {
   });
 
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [expandedTags, setExpandedTags] = useState(false);
+  const [tagsOverflow, setTagsOverflow] = useState(false);
+  const detailTagsRef = useRef(null);
+  const [zoomedPhoto, setZoomedPhoto] = useState(false);
+  const detailPanelRef = useRef(null);
+  const photoTriggerRef = useRef(null);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState(() => new Set());
   const [bulkDownloading, setBulkDownloading] = useState(false);
   const [bulkDownloadProgress, setBulkDownloadProgress] = useState("");
@@ -97,6 +103,51 @@ function Archive({ isAdmin = false }) {
 
   const [saving, setSaving] = useState(false);
   const [reportTarget, setReportTarget] = useState(null);
+
+  useEffect(() => {
+    const tags = detailTagsRef.current;
+    if (!tags || editMode) return;
+    const measure = () => setTagsOverflow(tags.scrollHeight > 69);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(tags);
+    return () => observer.disconnect();
+  }, [selectedPhoto, editMode]);
+
+  useEffect(() => {
+    setExpandedTags(false);
+    setZoomedPhoto(false);
+  }, [selectedPhoto?.id]);
+
+  useEffect(() => {
+    if (!photoModalOpen) return;
+    photoTriggerRef.current = document.activeElement;
+    detailPanelRef.current?.focus();
+    return () => photoTriggerRef.current?.focus?.();
+  }, [photoModalOpen]);
+
+  function handleDetailKeyDown(event) {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      if (reportTarget || saving) return;
+      if (zoomedPhoto) setZoomedPhoto(false);
+      else if (editMode) cancelEdit();
+      else setSelectedPhoto(null);
+    }
+    if (event.key === "Tab") {
+      const focusable = [...event.currentTarget.querySelectorAll(
+        'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary'
+      )].filter((element) => element.getClientRects().length);
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) {
+        event.preventDefault(); last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first?.focus();
+      }
+    }
+  }
+
 
   // =========================
   // 크롭 드래그
@@ -1546,168 +1597,79 @@ const hairColorAliases = {
       ========================= */}
 
       {selectedPhoto && (
-        <div className="photo-modal" onClick={() => setSelectedPhoto(null)}>
+        <div className="photo-modal photo-detail-overlay" onClick={() => {
+          if (!editMode && !saving) setSelectedPhoto(null);
+        }}>
           <div
-            className={`photo-modal-content ${editMode ? "is-editing" : ""}`}
+            ref={detailPanelRef}
+            className={`photo-modal-content photo-detail-panel ${editMode ? "is-editing" : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={editMode ? "사진 정보 수정" : "사진 상세"}
+            tabIndex={-1}
+            onKeyDown={handleDetailKeyDown}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 닫기 */}
+            <header className="photo-detail-header">
+              {!editMode ? (
+                <details className="content-detail-menu photo-detail-menu">
+                  <summary aria-label="사진 메뉴">⋯</summary>
+                  <div>
+                    <button type="button" onClick={() => setReportTarget({
+                      type: "photo", id: selectedPhoto.id,
+                      label: `${selectedPhoto.date || ""} 사진`.trim(),
+                      previewUrl: selectedPhoto.thumbnail_url || selectedPhoto.image_url,
+                      pageUrl: selectedPhoto.weverse_url || window.location.href,
+                    })}>태그 제안 · 수정 요청</button>
+                    <button type="button" onClick={() => sharePhoto(selectedPhoto)}>공유</button>
+                    {isDesktopDevice && <button type="button" onClick={() => copyPhotoToClipboard(selectedPhoto)}>사진 복사</button>}
+                    {isAdmin && <>
+                      <button type="button" onClick={() => openEditMode(selectedPhoto)}>사진 정보 수정</button>
+                      <button type="button" onClick={() => handleDeletePhoto(selectedPhoto)}>사진 삭제</button>
+                    </>}
+                  </div>
+                </details>
+              ) : <strong>사진 정보 수정</strong>}
+              <button type="button" className="photo-detail-close" disabled={saving}
+                aria-label={editMode ? "수정 취소하고 상세로 돌아가기" : "사진 상세 닫기"}
+                onClick={() => editMode ? cancelEdit() : setSelectedPhoto(null)}>×</button>
+            </header>
 
-            <button
-              className="modal-close"
-              onClick={() => setSelectedPhoto(null)}
-            >
-              ×
-            </button>
-
-            {!editMode && !isAdmin && (
-              <details className="content-detail-menu">
-                <summary aria-label="사진 설정">⋮</summary>
-                <div>
-                  <button type="button" onClick={() => setReportTarget({
-                    type: "photo",
-                    id: selectedPhoto.id,
-                    label: `${selectedPhoto.date || ""} 사진`.trim(),
-                    previewUrl: selectedPhoto.thumbnail_url || selectedPhoto.image_url,
-                    pageUrl: selectedPhoto.weverse_url || window.location.href,
-                  })}>
-                    제보하기 · 수정 요청
-                  </button>
-                </div>
-              </details>
+            {!editMode && (
+              <button type="button" className="modal-image photo-detail-image"
+                aria-label="사진 원본 확대 보기" onClick={() => setZoomedPhoto(true)}>
+                <img className="modal-image-main" src={selectedPhoto.image_url} alt="선택한 사진" />
+              </button>
             )}
-
-            {/* 큰 사진 */}
-
-            <div className="modal-image">
-              {/* 블러 배경 */}
-              <img
-                className="modal-image-background"
-                src={selectedPhoto.image_url}
-                alt=""
-              />
-
-              {/* 실제 사진 */}
-              <img
-                className="modal-image-main"
-                src={selectedPhoto.image_url}
-                alt=""
-              />
-            </div>
-
-            {/* 정보 */}
 
             <div className="modal-info">
               {!editMode ? (
                 <>
                   <div className="modal-date">{selectedPhoto.date}</div>
-
-                  <div className="modal-meta">
-                    {selectedPhoto.type}
-
-                    {selectedPhoto.hair_color && (
-                      <>
-                        <span>{" · "}</span>
-
-                        {selectedPhoto.hair_color}
-                      </>
-                    )}
-                  </div>
-
-                  {/* 태그 */}
-
                   {selectedPhoto.tags?.length > 0 && (
-                    <div className="modal-tags">
-                      {selectedPhoto.tags.map((tag, index) => (
-                        <button
-                          type="button"
-                          key={index}
-                          className="modal-tag-button"
-                          onClick={() => {
-                            setSearch(tag);
-                            setPhotoType("전체");
-                            setSelectedPhoto(null);
-                          }}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
+                    <>
+                      <div ref={detailTagsRef} className={`modal-tags photo-detail-tags ${expandedTags ? "is-expanded" : ""}`} id="photo-detail-tags"
+                        onFocusCapture={() => { if (tagsOverflow) setExpandedTags(true); }}>
+                        {selectedPhoto.tags.map((tag, index) => (
+                          <button type="button" key={index} className="modal-tag-button"
+                            onClick={() => {
+                              setSearch(tag); setPhotoType("전체"); setSelectedPhoto(null);
+                            }}>{tag}</button>
+                        ))}
+                      </div>
+                      {tagsOverflow && <button type="button" className="photo-tags-toggle" aria-expanded={expandedTags}
+                        aria-controls="photo-detail-tags" onClick={() => setExpandedTags((value) => !value)}>
+                        {expandedTags ? "태그 접기" : "태그 더보기"}
+                      </button>}
+                    </>
                   )}
-
-                  {!isAdmin && (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "6px",
-                        marginTop: "10px",
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="media-download-button"
-                        onClick={() => downloadPhoto(selectedPhoto)}
-                      >
-                        다운로드 ↓
-                      </button>
-
-                      {isDesktopDevice ? (
-                        <button
-                          type="button"
-                          className="media-download-button"
-                          onClick={() => copyPhotoToClipboard(selectedPhoto)}
-                        >
-                          사진 복사
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="media-download-button"
-                          onClick={() => sharePhoto(selectedPhoto)}
-                        >
-                          X로 공유 ↗
-                        </button>
-                      )}
-
-                    </div>
-                  )}
-
-                  {/* 위버스 */}
-
-                  {selectedPhoto.weverse_url && (
-                    <a
-                      className="weverse-link"
-                      href={selectedPhoto.weverse_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() =>
-                        void trackMediaEngagement("photo", selectedPhoto.id, "weverse")
-                      }
-                    >
-                      위버스에서 보기 ↗
-                    </a>
-                  )}
-
-                  {/* 관리자 버튼 */}
-
-                  {isAdmin && (
-                    <div className="admin-photo-actions">
-                      <button
-                        type="button"
-                        onClick={() => openEditMode(selectedPhoto)}
-                      >
-                        수정
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePhoto(selectedPhoto)}
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  )}
+                  <div className="photo-detail-actions">
+                    <button type="button" className="media-download-button" onClick={() => downloadPhoto(selectedPhoto)}>다운로드 ↓</button>
+                    {selectedPhoto.weverse_url && <a className="weverse-link" href={selectedPhoto.weverse_url}
+                      target="_blank" rel="noreferrer" onClick={() => void trackMediaEngagement("photo", selectedPhoto.id, "weverse")}>
+                      위버스 바로가기 ↗
+                    </a>}
+                  </div>
                 </>
               ) : (
                 /* =========================
@@ -1715,7 +1677,7 @@ const hairColorAliases = {
                 ========================= */
 
                 <div className="edit-form">
-                  <div className="edit-title">사진 정보 수정</div>
+
 
                   {/* =========================
                       크롭 미리보기
@@ -1817,7 +1779,11 @@ const hairColorAliases = {
                     onChange={(e) => setEditWeverseUrl(e.target.value)}
                   />
 
-                  {/* 수정 버튼 */}
+
+                </div>
+              )}
+            </div>
+            {editMode && (
 
                   <div className="edit-actions">
                     <button
@@ -1835,10 +1801,13 @@ const hairColorAliases = {
                     >
                       {saving ? "저장 중..." : "저장"}
                     </button>
-                  </div>
-                </div>
-              )}
-            </div>
+                  </div>)}
+            {zoomedPhoto && !editMode && (
+              <div className="photo-detail-zoom" onClick={() => setZoomedPhoto(false)}>
+                <button type="button" className="photo-detail-zoom-close" aria-label="원본 확대 닫기" onClick={() => setZoomedPhoto(false)}>×</button>
+                <img src={selectedPhoto.image_url} alt="확대한 원본 사진" />
+              </div>
+            )}
           </div>
         </div>
       )}
