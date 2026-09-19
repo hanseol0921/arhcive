@@ -5240,3 +5240,77 @@ body:has(.photo-manager-page) { overflow-y: auto; background: #f4f1e9; }
     min-height: 36px;
   }
 }
+/* Photo viewing and editing have independent height budgets. */
+.photo-detail-overlay { padding: 16px; }
+.photo-detail-panel.photo-modal-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 44px minmax(100px, 1fr) auto;
+  width: min(520px, calc(100vw - 32px));
+  height: min(780px, calc(100dvh - 32px));
+  max-height: calc(100dvh - 32px);
+  box-sizing: border-box;
+}
+.photo-detail-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 8px; background: white; z-index: 3; min-width: 0;
+}
+.photo-detail-header strong { padding-left: 8px; font-size: 15px; }
+.photo-detail-close, .photo-detail-menu summary {
+  display: grid; place-items: center; width: 44px; height: 44px;
+  border: 0; padding: 0; background: transparent; color: #55514a;
+  font-size: 25px; cursor: pointer; list-style: none;
+}
+.photo-detail-menu.content-detail-menu { position: relative; inset: auto; margin: 0; }
+.photo-detail-menu summary::-webkit-details-marker { display: none; }
+.photo-detail-menu.content-detail-menu > div { left: 0; right: auto; top: 100%; min-width: 180px; }
+.photo-detail-menu.content-detail-menu button { min-height: 44px; }
+.photo-detail-panel .photo-detail-image {
+  width: 100%; height: 100%; min-height: 0; padding: 0 16px;
+  box-sizing: border-box; border: 0; background: #fff; cursor: zoom-in;
+}
+.photo-detail-panel .modal-info {
+  width: 100%; box-sizing: border-box; padding: 12px 16px 16px;
+  min-height: 0; max-height: 40dvh; overflow: auto;
+  overscroll-behavior: contain; flex: initial;
+}
+.photo-detail-panel .modal-info > * { flex-shrink: 0; }
+.photo-detail-panel .photo-detail-tags {
+  margin-top: 8px; gap: 5px; max-height: 69px; overflow: hidden;
+}
+.photo-detail-tags .modal-tag-button {
+  height: 32px; box-sizing: border-box; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px;
+}
+.photo-detail-panel .photo-detail-tags.is-expanded { max-height: none; }
+.photo-tags-toggle { align-self: flex-start; padding: 6px 0; border: 0; background: none; color: #65605a; font-size: 12px; cursor: pointer; }
+.photo-detail-actions { display: flex; gap: 8px; margin-top: 12px; }
+.photo-detail-actions > .media-download-button, .photo-detail-actions > .weverse-link {
+  display: flex; align-items: center; justify-content: center; flex: 1;
+  min-height: 44px; margin: 0; padding: 8px; box-sizing: border-box;
+  border: 1px solid #dedad3; border-radius: 5px; background: #fff;
+  color: #55514a; font-size: 12px; text-decoration: none; text-align: center;
+}
+.photo-detail-panel.is-editing.photo-modal-content {
+  display: grid; grid-template-rows: 48px minmax(0, 1fr) auto;
+  width: min(560px, calc(100vw - 32px));
+}
+.photo-detail-panel.is-editing .modal-info { max-height: none; overflow-y: auto; padding: 12px 20px 20px; }
+.photo-detail-panel.is-editing > .edit-actions {
+  margin: 0; padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  background: #fff; border-top: 1px solid #e5e1da;
+}
+.photo-detail-panel.is-editing > .edit-actions button { flex: 1; min-height: 44px; }
+.photo-detail-zoom { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(0,0,0,.94); padding: 50px 12px 12px; cursor: zoom-out; }
+.photo-detail-zoom img { width: 100%; height: 100%; object-fit: contain; min-height: 0; }
+.photo-detail-zoom-close { position: absolute; top: 8px; right: 12px; width: 44px; height: 44px; color: white; background: transparent; border: 0; font-size: 30px; cursor: pointer; }
+@media (max-width: 800px) {
+  .photo-detail-panel.is-editing.photo-modal-content {
+    position: fixed; inset: 0; width: 100%; height: 100dvh;
+    max-height: 100dvh; border-radius: 0;
+  }
+}
+@media (max-height: 460px) {
+  .photo-detail-panel:not(.is-editing) { grid-template-rows: 44px minmax(60px, 1fr) auto; }
+  .photo-detail-panel:not(.is-editing) .modal-info { max-height: 45dvh; }
+}
