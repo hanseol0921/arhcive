@@ -1538,7 +1538,8 @@ const hairColorAliases = {
             "은발",
             "핑머",
             "주머",
-            "와인색",
+            "와인",
+            "베이지"
           ]}
           allActive={
             photoType === "전체" &&
