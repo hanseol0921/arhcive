@@ -389,6 +389,9 @@ function Videos({ isAdmin = false }) {
           matchesSearch
         );
       })
+      .filter(
+        (video) => sortOrder !== "인기순" || Number(video.view_count || 0) > 0,
+      )
       .sort((a, b) => {
         if (sortOrder === "인기순") {
           const popularityDiff = getPopularityScore(b) - getPopularityScore(a);

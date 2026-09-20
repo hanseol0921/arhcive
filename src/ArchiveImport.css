@@ -1,4 +1,3 @@
-
 /* =========================
    전체
 ========================= */
@@ -295,12 +294,7 @@
   display: grid;
 
   grid-template-columns:
-    1fr
-    1fr
-    1fr
-    1.3fr
-    1.3fr
-    1.6fr;
+    1fr 1fr 1fr 1.3fr 1.3fr 1.6fr;
 
   gap: 6px;
 }
@@ -574,8 +568,7 @@
   display: grid;
 
   grid-template-columns:
-    1fr
-    1fr;
+    1fr 1fr;
 
   gap: 6px;
 }
@@ -741,9 +734,7 @@
 
   .admin-page {
     padding:
-      16px
-      12px
-      90px;
+      16px 12px 90px;
   }
 
   .admin-header {
@@ -860,10 +851,7 @@
   display: grid;
 
   grid-template-columns:
-    1fr
-    1fr
-    1fr
-    2fr;
+    1fr 1fr 1fr 2fr;
 
   gap: 8px;
 }

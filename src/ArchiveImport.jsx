@@ -206,7 +206,10 @@ function ArchiveImport() {
     const rawMetadataBody = readRawPdfInfoString(pdfBytes, "WeverseBodyText");
     const rawMetadataDate = readRawPdfInfoString(pdfBytes, "WeversePostDate");
     const rawMetadataUrl = readRawPdfInfoString(pdfBytes, "WeversePostURL");
-    const rawContentBlocks = readRawPdfInfoString(pdfBytes, "WeverseContentBlocks");
+    const rawContentBlocks = readRawPdfInfoString(
+      pdfBytes,
+      "WeverseContentBlocks",
+    );
 
     const pdf = await pdfjsLib.getDocument({
       data: buffer,
@@ -394,13 +397,16 @@ function ArchiveImport() {
           : "");
       const originalUrl = metadataUrl || extractedLink?.[1] || "";
 
-      return { text: [
-        dateLine,
-        originalUrl ? `원본 링크: ${originalUrl}` : "",
-        exactMetadataBody,
-      ]
-        .filter((value, index) => index === 2 || Boolean(value))
-        .join("\n"), contentBlocks };
+      return {
+        text: [
+          dateLine,
+          originalUrl ? `원본 링크: ${originalUrl}` : "",
+          exactMetadataBody,
+        ]
+          .filter((value, index) => index === 2 || Boolean(value))
+          .join("\n"),
+        contentBlocks,
+      };
     }
 
     return { text: extractedText, contentBlocks };
@@ -1322,7 +1328,11 @@ function ArchiveImport() {
             item.file.name,
           )}`;
 
-          const { publicUrl: imageUrl } = await uploadToR2("photos", path, item.file);
+          const { publicUrl: imageUrl } = await uploadToR2(
+            "photos",
+            path,
+            item.file,
+          );
 
           uploadedFiles.push({
             bucket: "photos",
@@ -1399,7 +1409,11 @@ function ArchiveImport() {
             item.file.name,
           )}`;
 
-          const { publicUrl: videoUrl } = await uploadToR2("videos", path, item.file);
+          const { publicUrl: videoUrl } = await uploadToR2(
+            "videos",
+            path,
+            item.file,
+          );
 
           uploadedFiles.push({
             bucket: "videos",
@@ -1727,7 +1741,8 @@ function ArchiveImport() {
               <option value="은발">은발</option>
               <option value="핑머">핑머</option>
               <option value="주머">주머</option>
-              <option value="와인색">와인색</option>
+              <option value="와인">와인</option>
+              <option value="베이지">베이지</option>
             </select>
 
             <button
@@ -1940,7 +1955,8 @@ function ArchiveImport() {
                           <option value="은발">은발</option>
                           <option value="핑머">핑머</option>
                           <option value="주머">주머</option>
-                          <option value="와인색">와인색</option>
+                          <option value="와인">와인</option>
+                          <option value="베이지">베이지</option>
                         </select>
 
                         <label className="archive-visible-toggle import-visible-toggle">
@@ -1960,9 +1976,17 @@ function ArchiveImport() {
                           사진 아카이브에 표시
                         </label>
 
-                        <TagPicker value={item.tags} disabled={draft.status === "uploaded"} onChange={(value) => updateMedia(draft.id, item.id, "tags", value)} />
+                        <TagPicker
+                          value={item.tags}
+                          disabled={draft.status === "uploaded"}
+                          onChange={(value) =>
+                            updateMedia(draft.id, item.id, "tags", value)
+                          }
+                        />
 
-                        <small>검색용 태그는 태그 관리에서 일괄 수정됩니다.</small>
+                        <small>
+                          검색용 태그는 태그 관리에서 일괄 수정됩니다.
+                        </small>
                       </>
                     )}
 
