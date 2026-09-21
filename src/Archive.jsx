@@ -1351,6 +1351,9 @@ const hairColorAliases = {
           matchesSearch
         );
       })
+      .filter(
+        (photo) => sortOrder !== "인기순" || Number(photo.view_count || 0) > 0,
+      )
       .sort((a, b) => {
         const descending = sortOrder !== "오래된순";
 
